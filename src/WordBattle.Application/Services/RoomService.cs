@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using WordBattle.Application.Dtos.Requests;
 using WordBattle.Application.Dtos.Responses;
+using WordBattle.Application.Exceptions;
 using WordBattle.Application.Interfaces;
 using WordBattle.Domain.Entities;
 using WordBattle.Domain.Enums;
@@ -26,7 +27,7 @@ public sealed class RoomService(IGameDbContext dbContext) : IRoomService
         JoinRoomRequest request,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return JoinRoomAsync(code, request, cancellationToken);
     }
 
     public Task<RoomResponse> GetAsync(
@@ -87,6 +88,84 @@ public sealed class RoomService(IGameDbContext dbContext) : IRoomService
             PlayerId = hostPlayer.Id,
             PlayerToken = hostPlayer.PlayerToken,
             IsHost = true
+        };
+    }
+
+    private async Task<JoinRoomResponse> JoinRoomAsync(
+        string code,
+        JoinRoomRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new BusinessRuleException("Room code is required.");
+        }
+
+        code = code.Trim().ToUpperInvariant();
+        var nickname = request.Nickname.Trim();
+
+        var room = await dbContext.Rooms
+            .Include(room => room.Players)
+            .FirstOrDefaultAsync(room => room.Code == code, cancellationToken);
+
+        if (room is null)
+        {
+            throw new NotFoundException("Room not found.");
+        }
+
+        if (room.Status == RoomStatus.Closed)
+        {
+            throw new BusinessRuleException("Room is closed.");
+        }
+
+        if (room.Status == RoomStatus.Playing)
+        {
+            throw new BusinessRuleException("Game has already started.");
+        }
+
+        if (room.Players.Count >= 2)
+        {
+            throw new BusinessRuleException("Room is full.");
+        }
+
+        var nicknameExists = room.Players
+            .Any(player => string.Equals(
+                player.Nickname,
+                nickname,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (nicknameExists)
+        {
+            throw new BusinessRuleException("Nickname is already in use in this room.");
+        }
+
+        var newPlayer = new RoomPlayer
+        {
+            Id = Guid.NewGuid(),
+            RoomId = room.Id,
+            Nickname = nickname,
+            PlayerToken = GeneratePlayerToken(),
+            Score = 0,
+            IsReady = false,
+            IsConnected = false,
+            IsHost = false
+        };
+
+        dbContext.RoomPlayers.Add(newPlayer);
+
+        if (room.Players.Count == 2)
+        {
+            room.Status = RoomStatus.Ready;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new JoinRoomResponse
+        {
+            RoomId = room.Id,
+            Code = room.Code,
+            PlayerId = newPlayer.Id,
+            PlayerToken = newPlayer.PlayerToken
         };
     }
 

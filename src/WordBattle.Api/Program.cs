@@ -1,5 +1,6 @@
 using FluentValidation.AspNetCore;
 using WordBattle.Api.Hubs;
+using WordBattle.Api.Middleware;
 using WordBattle.Application;
 using WordBattle.Infrastructure;
 
@@ -15,6 +16,8 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
