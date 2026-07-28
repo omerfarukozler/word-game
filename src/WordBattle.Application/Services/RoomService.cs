@@ -34,7 +34,7 @@ public sealed class RoomService(IGameDbContext dbContext) : IRoomService
         string code,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return GetRoomAsync(code, cancellationToken);
     }
 
     public Task<MatchResponse> StartAsync(
@@ -166,6 +166,63 @@ public sealed class RoomService(IGameDbContext dbContext) : IRoomService
             Code = room.Code,
             PlayerId = newPlayer.Id,
             PlayerToken = newPlayer.PlayerToken
+        };
+    }
+
+    private async Task<RoomResponse> GetRoomAsync(
+        string code,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new BusinessRuleException("Room code is required.");
+        }
+
+        code = code.Trim().ToUpperInvariant();
+
+        var room = await dbContext.Rooms
+            .AsNoTracking()
+            .Include(room => room.Players)
+            .Include(room => room.Matches)
+            .FirstOrDefaultAsync(room => room.Code == code, cancellationToken);
+
+        if (room is null)
+        {
+            throw new NotFoundException("Room not found.");
+        }
+
+        return new RoomResponse
+        {
+            Id = room.Id,
+            Code = room.Code,
+            Status = room.Status,
+            CreatedAt = room.CreatedAt,
+            ClosedAt = room.ClosedAt,
+            Players = room.Players
+                .OrderByDescending(player => player.IsHost)
+                .ThenBy(player => player.Nickname)
+                .Select(player => new RoomPlayerResponse
+                {
+                    Id = player.Id,
+                    Nickname = player.Nickname,
+                    Score = player.Score,
+                    IsReady = player.IsReady,
+                    IsConnected = player.IsConnected,
+                    IsHost = player.IsHost
+                })
+                .ToArray(),
+            Matches = room.Matches
+                .OrderByDescending(match => match.StartedAt ?? DateTime.MinValue)
+                .Select(match => new MatchResponse
+                {
+                    Id = match.Id,
+                    RoomId = match.RoomId,
+                    Status = match.Status,
+                    WinnerPlayerId = match.WinnerPlayerId,
+                    StartedAt = match.StartedAt,
+                    CompletedAt = match.CompletedAt
+                })
+                .ToArray()
         };
     }
 

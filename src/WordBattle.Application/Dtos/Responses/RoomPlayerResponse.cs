@@ -11,4 +11,6 @@ public sealed class RoomPlayerResponse
     public bool IsReady { get; set; }
 
     public bool IsConnected { get; set; }
+
+    public bool IsHost { get; set; }
 }
