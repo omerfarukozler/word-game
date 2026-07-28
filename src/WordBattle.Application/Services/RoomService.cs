@@ -9,7 +9,7 @@ using WordBattle.Domain.Enums;
 
 namespace WordBattle.Application.Services;
 
-public sealed class RoomService(IGameDbContext dbContext) : IRoomService
+public sealed class RoomService(IGameDbContext dbContext, IGameNotifier gameNotifier) : IRoomService
 {
     private const string RoomCodeCharacters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private const int RoomCodeLength = 6;
@@ -160,6 +160,9 @@ public sealed class RoomService(IGameDbContext dbContext) : IRoomService
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        var roomUpdated = await GetRoomForNotificationAsync(room.Code, cancellationToken);
+        await gameNotifier.RoomUpdatedAsync(room.Code, roomUpdated, cancellationToken);
+
         return new JoinRoomResponse
         {
             RoomId = room.Id,
@@ -191,6 +194,11 @@ public sealed class RoomService(IGameDbContext dbContext) : IRoomService
             throw new NotFoundException("Room not found.");
         }
 
+        return MapRoom(room);
+    }
+
+    private static RoomResponse MapRoom(Room room)
+    {
         return new RoomResponse
         {
             Id = room.Id,
@@ -224,6 +232,19 @@ public sealed class RoomService(IGameDbContext dbContext) : IRoomService
                 })
                 .ToArray()
         };
+    }
+
+    private async Task<RoomResponse> GetRoomForNotificationAsync(
+        string code,
+        CancellationToken cancellationToken)
+    {
+        var room = await dbContext.Rooms
+            .AsNoTracking()
+            .Include(room => room.Players)
+            .Include(room => room.Matches)
+            .FirstAsync(room => room.Code == code, cancellationToken);
+
+        return MapRoom(room);
     }
 
     private async Task<string> GenerateUniqueRoomCodeAsync(CancellationToken cancellationToken)
