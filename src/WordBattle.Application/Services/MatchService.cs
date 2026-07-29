@@ -105,6 +105,9 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
             match.TargetWord,
             normalizedWord);
 
+        var isCorrect = evaluation.All(
+            item => item.Status == GuessLetterStatus.Correct);
+
         var attemptNumber = await dbContext.Guesses
             .AsNoTracking()
             .CountAsync(
@@ -127,6 +130,14 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
 
         dbContext.Guesses.Add(guess);
 
+        if (isCorrect)
+        {
+            match.Status = MatchStatus.Completed;
+            match.WinnerPlayerId = player.Id;
+            match.CompletedAt = submittedAt;
+            match.Room.Status = RoomStatus.Ready;
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var response = new SubmitGuessResponse
@@ -137,6 +148,9 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
             Word = guess.Word,
             AttemptNumber = guess.AttemptNumber,
             Evaluation = evaluation,
+            IsCorrect = isCorrect,
+            IsMatchCompleted = isCorrect,
+            WinnerPlayerId = isCorrect ? player.Id : null,
             SubmittedAt = guess.CreatedAt
         };
 
@@ -164,6 +178,30 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
                 match.Room.Code,
                 guess.MatchId,
                 guess.Id);
+        }
+
+        if (isCorrect)
+        {
+            try
+            {
+                await gameNotifier.MatchCompletedAsync(
+                    match.Room.Code,
+                    new MatchCompletedNotification
+                    {
+                        MatchId = match.Id,
+                        WinnerPlayerId = player.Id,
+                        CompletedAt = match.CompletedAt!.Value
+                    },
+                    cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "MatchCompleted notification could not be sent for room {RoomCode}, match {MatchId}",
+                    match.Room.Code,
+                    match.Id);
+            }
         }
 
         return response;

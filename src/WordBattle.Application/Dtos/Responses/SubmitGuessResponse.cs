@@ -17,5 +17,11 @@ public sealed class SubmitGuessResponse
     public IReadOnlyList<GuessLetterEvaluation> Evaluation { get; set; }
         = Array.Empty<GuessLetterEvaluation>();
 
+    public bool IsCorrect { get; set; }
+
+    public bool IsMatchCompleted { get; set; }
+
+    public Guid? WinnerPlayerId { get; set; }
+
     public DateTime SubmittedAt { get; set; }
 }

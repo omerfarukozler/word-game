@@ -19,4 +19,9 @@ public interface IGameNotifier
         string roomCode,
         GuessSubmittedNotification notification,
         CancellationToken cancellationToken = default);
+
+    Task MatchCompletedAsync(
+        string roomCode,
+        MatchCompletedNotification notification,
+        CancellationToken cancellationToken = default);
 }
