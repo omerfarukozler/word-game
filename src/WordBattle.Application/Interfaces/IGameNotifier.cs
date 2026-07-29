@@ -1,3 +1,4 @@
+using WordBattle.Application.Dtos.Notifications;
 using WordBattle.Application.Dtos.Responses;
 
 namespace WordBattle.Application.Interfaces;
@@ -12,5 +13,10 @@ public interface IGameNotifier
     Task MatchStartedAsync(
         string roomCode,
         MatchResponse match,
+        CancellationToken cancellationToken = default);
+
+    Task GuessSubmittedAsync(
+        string roomCode,
+        GuessSubmittedNotification notification,
         CancellationToken cancellationToken = default);
 }

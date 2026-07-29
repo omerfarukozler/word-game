@@ -1,8 +1,8 @@
 using WordBattle.Application.Models;
 
-namespace WordBattle.Application.Dtos.Responses;
+namespace WordBattle.Application.Dtos.Notifications;
 
-public sealed class SubmitGuessResponse
+public sealed class GuessSubmittedNotification
 {
     public Guid Id { get; set; }
 

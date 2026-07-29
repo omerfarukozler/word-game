@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using WordBattle.Api.Hubs;
+using WordBattle.Application.Dtos.Notifications;
 using WordBattle.Application.Dtos.Responses;
 using WordBattle.Application.Interfaces;
 
@@ -9,6 +10,7 @@ public sealed class SignalRGameNotifier(IHubContext<GameHub> hubContext) : IGame
 {
     private const string RoomUpdatedEventName = "RoomUpdated";
     private const string MatchStartedEventName = "MatchStarted";
+    private const string GuessSubmittedEventName = "GuessSubmitted";
 
     public Task RoomUpdatedAsync(
         string roomCode,
@@ -32,5 +34,17 @@ public sealed class SignalRGameNotifier(IHubContext<GameHub> hubContext) : IGame
         return hubContext.Clients
             .Group(normalizedRoomCode)
             .SendAsync(MatchStartedEventName, match, cancellationToken);
+    }
+
+    public Task GuessSubmittedAsync(
+        string roomCode,
+        GuessSubmittedNotification notification,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedRoomCode = roomCode.Trim().ToUpperInvariant();
+
+        return hubContext.Clients
+            .Group(normalizedRoomCode)
+            .SendAsync(GuessSubmittedEventName, notification, cancellationToken);
     }
 }

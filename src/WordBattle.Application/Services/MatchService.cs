@@ -1,5 +1,7 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using WordBattle.Application.Dtos.Notifications;
 using WordBattle.Application.Dtos.Requests;
 using WordBattle.Application.Dtos.Responses;
 using WordBattle.Application.Exceptions;
@@ -9,7 +11,7 @@ using WordBattle.Domain.Enums;
 
 namespace WordBattle.Application.Services;
 
-public sealed class MatchService(IGameDbContext dbContext) : IMatchService
+public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guessEvaluator, IGameNotifier gameNotifier, ILogger<MatchService> logger) : IMatchService
 {
     private static readonly CultureInfo TurkishCulture =
         CultureInfo.GetCultureInfo("tr-TR");
@@ -93,6 +95,16 @@ public sealed class MatchService(IGameDbContext dbContext) : IMatchService
                 "The guessed word is not in the word list.");
         }
 
+        if (string.IsNullOrWhiteSpace(match.TargetWord))
+        {
+            throw new InvalidOperationException(
+                "The active match does not have a target word.");
+        }
+
+        var evaluation = guessEvaluator.Evaluate(
+            match.TargetWord,
+            normalizedWord);
+
         var attemptNumber = await dbContext.Guesses
             .AsNoTracking()
             .CountAsync(
@@ -117,13 +129,43 @@ public sealed class MatchService(IGameDbContext dbContext) : IMatchService
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new SubmitGuessResponse
+        var response = new SubmitGuessResponse
         {
             Id = guess.Id,
             MatchId = guess.MatchId,
             PlayerId = guess.PlayerId,
             Word = guess.Word,
+            AttemptNumber = guess.AttemptNumber,
+            Evaluation = evaluation,
             SubmittedAt = guess.CreatedAt
         };
+
+        try
+        {
+            await gameNotifier.GuessSubmittedAsync(
+                match.Room.Code,
+                new GuessSubmittedNotification
+                {
+                    Id = response.Id,
+                    MatchId = response.MatchId,
+                    PlayerId = response.PlayerId,
+                    Word = response.Word,
+                    AttemptNumber = response.AttemptNumber,
+                    Evaluation = response.Evaluation,
+                    SubmittedAt = response.SubmittedAt
+                },
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "GuessSubmitted notification could not be sent for room {RoomCode}, match {MatchId}, guess {GuessId}",
+                match.Room.Code,
+                guess.MatchId,
+                guess.Id);
+        }
+
+        return response;
     }
 }
