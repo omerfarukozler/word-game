@@ -23,7 +23,13 @@ public interface IRoomService
         StartMatchRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<MatchResponse> RematchAsync(
+    Task<RematchRequestResponse> RequestRematchAsync(
         string code,
+        RematchRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<RespondRematchResponse> RespondRematchAsync(
+        string code,
+        RespondRematchRequest request,
         CancellationToken cancellationToken = default);
 }

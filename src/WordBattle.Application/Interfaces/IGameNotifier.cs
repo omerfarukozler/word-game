@@ -24,4 +24,14 @@ public interface IGameNotifier
         string roomCode,
         MatchCompletedNotification notification,
         CancellationToken cancellationToken = default);
+
+    Task RematchRequestedAsync(
+        string roomCode,
+        RematchRequestedNotification notification,
+        CancellationToken cancellationToken = default);
+
+    Task RematchRejectedAsync(
+        string roomCode,
+        RematchRejectedNotification notification,
+        CancellationToken cancellationToken = default);
 }

@@ -61,15 +61,36 @@ public sealed class RoomController(IRoomService roomService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("{code}/rematch", Name = "CreateRoomRematch")]
-    [ProducesResponseType(typeof(MatchResponse), StatusCodes.Status200OK)]
+    [HttpPost("{code}/rematch/request", Name = "RequestRoomRematch")]
+    [ProducesResponseType(typeof(RematchRequestResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<MatchResponse>> Rematch(
+    public async Task<ActionResult<RematchRequestResponse>> RequestRematch(
         string code,
+        [FromBody] RematchRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await roomService.RematchAsync(code, cancellationToken);
+        var response = await roomService.RequestRematchAsync(
+            code,
+            request,
+            cancellationToken);
+
+        return Ok(response);
+    }
+
+    [HttpPost("{code}/rematch/respond", Name = "RespondRoomRematch")]
+    [ProducesResponseType(typeof(RespondRematchResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RespondRematchResponse>> RespondRematch(
+        string code,
+        [FromBody] RespondRematchRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await roomService.RespondRematchAsync(
+            code,
+            request,
+            cancellationToken);
 
         return Ok(response);
     }

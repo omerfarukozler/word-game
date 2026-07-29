@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using WordBattle.Application.Dtos.Notifications;
 using WordBattle.Application.Dtos.Requests;
 using WordBattle.Application.Dtos.Responses;
 using WordBattle.Application.Exceptions;
@@ -238,6 +239,16 @@ public sealed class RoomService(
             throw new BusinessRuleException("Exactly two players are required to start a match.");
         }
 
+        var hasAnyMatch = await dbContext.Matches
+            .AsNoTracking()
+            .AnyAsync(match => match.RoomId == room.Id, cancellationToken);
+
+        if (hasAnyMatch)
+        {
+            throw new BusinessRuleException(
+                "A new match must be started through the rematch flow.");
+        }
+
         var hasActiveMatch = room.Matches.Any(match =>
             match.Status == MatchStatus.Waiting ||
             match.Status == MatchStatus.Playing);
@@ -247,33 +258,13 @@ public sealed class RoomService(
             throw new BusinessRuleException("An active match already exists in this room.");
         }
 
-        var targetWord = await wordProvider.GetRandomWordAsync(5, cancellationToken);
-        var startedAt = DateTime.UtcNow;
-        var match = new GameMatch
-        {
-            Id = Guid.NewGuid(),
-            RoomId = room.Id,
-            TargetWord = targetWord,
-            Status = MatchStatus.Playing,
-            WinnerPlayerId = null,
-            StartedAt = startedAt,
-            CompletedAt = null
-        };
-
+        var match = await CreatePlayingMatchAsync(room.Id, cancellationToken);
         dbContext.Matches.Add(match);
         room.Status = RoomStatus.Playing;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var response = new MatchResponse
-        {
-            Id = match.Id,
-            RoomId = match.RoomId,
-            Status = match.Status,
-            WinnerPlayerId = match.WinnerPlayerId,
-            StartedAt = match.StartedAt,
-            CompletedAt = match.CompletedAt
-        };
+        var response = MapMatch(match);
 
         try
         {
@@ -291,11 +282,252 @@ public sealed class RoomService(
         return response;
     }
 
-    public Task<MatchResponse> RematchAsync(
+    public async Task<RematchRequestResponse> RequestRematchAsync(
         string code,
+        RematchRequest request,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new BusinessRuleException("Room code is required.");
+        }
+
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.PlayerToken))
+        {
+            throw new BusinessRuleException("Player token is required.");
+        }
+
+        code = code.Trim().ToUpperInvariant();
+        var playerToken = request.PlayerToken.Trim();
+
+        var room = await GetRoomForRematchAsync(code, cancellationToken);
+        var requester = ValidateRematchRequester(room, playerToken);
+
+        if (room.RematchRequestedByPlayerId.HasValue)
+        {
+            throw new BusinessRuleException("A rematch request is already pending.");
+        }
+
+        var requestedAt = DateTime.UtcNow;
+
+        room.RematchRequestedByPlayerId = requester.Id;
+        room.RematchRequestedAt = requestedAt;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var response = new RematchRequestResponse
+        {
+            RequestedByPlayerId = requester.Id,
+            RequestedAt = requestedAt
+        };
+
+        try
+        {
+            await gameNotifier.RematchRequestedAsync(
+                room.Code,
+                new RematchRequestedNotification
+                {
+                    RequestedByPlayerId = response.RequestedByPlayerId,
+                    RequestedAt = response.RequestedAt
+                },
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "RematchRequested notification could not be sent for room {RoomCode}",
+                room.Code);
+        }
+
+        return response;
+    }
+
+    public async Task<RespondRematchResponse> RespondRematchAsync(
+        string code,
+        RespondRematchRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new BusinessRuleException("Room code is required.");
+        }
+
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.PlayerToken))
+        {
+            throw new BusinessRuleException("Player token is required.");
+        }
+
+        code = code.Trim().ToUpperInvariant();
+        var playerToken = request.PlayerToken.Trim();
+
+        var room = await GetRoomForRematchAsync(code, cancellationToken);
+        var responder = ValidateRematchResponder(room, playerToken);
+        var requestedByPlayerId = room.RematchRequestedByPlayerId!.Value;
+
+        if (!request.Accept)
+        {
+            var rejectedAt = DateTime.UtcNow;
+
+            room.RematchRequestedByPlayerId = null;
+            room.RematchRequestedAt = null;
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                await gameNotifier.RematchRejectedAsync(
+                    room.Code,
+                    new RematchRejectedNotification
+                    {
+                        RequestedByPlayerId = requestedByPlayerId,
+                        RejectedByPlayerId = responder.Id,
+                        RejectedAt = rejectedAt
+                    },
+                    cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "RematchRejected notification could not be sent for room {RoomCode}",
+                    room.Code);
+            }
+
+            return new RespondRematchResponse
+            {
+                Accepted = false,
+                Match = null
+            };
+        }
+
+        var match = await CreatePlayingMatchAsync(room.Id, cancellationToken);
+
+        dbContext.Matches.Add(match);
+        room.Status = RoomStatus.Playing;
+        room.RematchRequestedByPlayerId = null;
+        room.RematchRequestedAt = null;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var matchResponse = MapMatch(match);
+
+        try
+        {
+            await gameNotifier.MatchStartedAsync(room.Code, matchResponse, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "MatchStarted notification could not be sent for room {RoomCode} and match {MatchId}",
+                room.Code,
+                match.Id);
+        }
+
+        return new RespondRematchResponse
+        {
+            Accepted = true,
+            Match = matchResponse
+        };
+    }
+
+    private async Task<Room> GetRoomForRematchAsync(
+        string code,
+        CancellationToken cancellationToken)
+    {
+        var room = await dbContext.Rooms
+            .Include(room => room.Players)
+            .Include(room => room.Matches)
+            .FirstOrDefaultAsync(room => room.Code == code, cancellationToken);
+
+        if (room is null)
+        {
+            throw new NotFoundException("Room not found.");
+        }
+
+        if (room.Status != RoomStatus.Ready)
+        {
+            throw new BusinessRuleException("The room is not ready for rematch.");
+        }
+
+        if (room.Players.Count != 2)
+        {
+            throw new BusinessRuleException("Exactly two players are required for rematch.");
+        }
+
+        var hasCompletedMatch = room.Matches.Any(match =>
+            match.Status == MatchStatus.Completed);
+
+        if (!hasCompletedMatch)
+        {
+            throw new BusinessRuleException("There is no completed match to replay.");
+        }
+
+        var hasActiveMatch = room.Matches.Any(match =>
+            match.Status == MatchStatus.Waiting ||
+            match.Status == MatchStatus.Playing);
+
+        if (hasActiveMatch)
+        {
+            throw new BusinessRuleException("An active match already exists in this room.");
+        }
+
+        return room;
+    }
+
+    private static RoomPlayer ValidateRematchRequester(
+        Room room,
+        string playerToken)
+    {
+        var requester = room.Players.FirstOrDefault(player =>
+            player.PlayerToken == playerToken);
+
+        if (requester is null)
+        {
+            throw new BusinessRuleException("Invalid player token.");
+        }
+
+        return requester;
+    }
+
+    private static RoomPlayer ValidateRematchResponder(
+        Room room,
+        string playerToken)
+    {
+        var responder = room.Players.FirstOrDefault(player =>
+            player.PlayerToken == playerToken);
+
+        if (responder is null)
+        {
+            throw new BusinessRuleException("Invalid player token.");
+        }
+
+        if (!room.RematchRequestedByPlayerId.HasValue ||
+            !room.RematchRequestedAt.HasValue)
+        {
+            throw new BusinessRuleException("There is no pending rematch request.");
+        }
+
+        if (room.RematchRequestedByPlayerId == responder.Id)
+        {
+            throw new BusinessRuleException(
+                "A player cannot respond to their own rematch request.");
+        }
+
+        var requesterStillInRoom = room.Players.Any(player =>
+            player.Id == room.RematchRequestedByPlayerId.Value);
+
+        if (!requesterStillInRoom)
+        {
+            throw new BusinessRuleException("The rematch requester is no longer in the room.");
+        }
+
+        return responder;
     }
 
     private static RoomResponse MapRoom(Room room)
@@ -346,6 +578,38 @@ public sealed class RoomService(
             .FirstAsync(room => room.Code == code, cancellationToken);
 
         return MapRoom(room);
+    }
+
+    private async Task<GameMatch> CreatePlayingMatchAsync(
+        Guid roomId,
+        CancellationToken cancellationToken)
+    {
+        var targetWord = await wordProvider.GetRandomWordAsync(5, cancellationToken);
+        var startedAt = DateTime.UtcNow;
+
+        return new GameMatch
+        {
+            Id = Guid.NewGuid(),
+            RoomId = roomId,
+            TargetWord = targetWord,
+            Status = MatchStatus.Playing,
+            WinnerPlayerId = null,
+            StartedAt = startedAt,
+            CompletedAt = null
+        };
+    }
+
+    private static MatchResponse MapMatch(GameMatch match)
+    {
+        return new MatchResponse
+        {
+            Id = match.Id,
+            RoomId = match.RoomId,
+            Status = match.Status,
+            WinnerPlayerId = match.WinnerPlayerId,
+            StartedAt = match.StartedAt,
+            CompletedAt = match.CompletedAt
+        };
     }
 
     private async Task<string> GenerateUniqueRoomCodeAsync(CancellationToken cancellationToken)

@@ -12,6 +12,8 @@ public sealed class SignalRGameNotifier(IHubContext<GameHub> hubContext) : IGame
     private const string MatchStartedEventName = "MatchStarted";
     private const string GuessSubmittedEventName = "GuessSubmitted";
     private const string MatchCompletedEventName = "MatchCompleted";
+    private const string RematchRequestedEventName = "RematchRequested";
+    private const string RematchRejectedEventName = "RematchRejected";
 
     public Task RoomUpdatedAsync(
         string roomCode,
@@ -59,5 +61,29 @@ public sealed class SignalRGameNotifier(IHubContext<GameHub> hubContext) : IGame
         return hubContext.Clients
             .Group(normalizedRoomCode)
             .SendAsync(MatchCompletedEventName, notification, cancellationToken);
+    }
+
+    public Task RematchRequestedAsync(
+        string roomCode,
+        RematchRequestedNotification notification,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedRoomCode = roomCode.Trim().ToUpperInvariant();
+
+        return hubContext.Clients
+            .Group(normalizedRoomCode)
+            .SendAsync(RematchRequestedEventName, notification, cancellationToken);
+    }
+
+    public Task RematchRejectedAsync(
+        string roomCode,
+        RematchRejectedNotification notification,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedRoomCode = roomCode.Trim().ToUpperInvariant();
+
+        return hubContext.Clients
+            .Group(normalizedRoomCode)
+            .SendAsync(RematchRejectedEventName, notification, cancellationToken);
     }
 }

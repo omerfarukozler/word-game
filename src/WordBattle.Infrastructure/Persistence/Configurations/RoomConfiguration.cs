@@ -27,6 +27,13 @@ public sealed class RoomConfiguration : IEntityTypeConfiguration<Room>
         builder.Property(room => room.ClosedAt)
             .HasColumnType("timestamp with time zone");
 
+        builder.Property(room => room.RematchRequestedByPlayerId)
+            .IsRequired(false);
+
+        builder.Property(room => room.RematchRequestedAt)
+            .IsRequired(false)
+            .HasColumnType("timestamp with time zone");
+
         builder.HasMany(room => room.Players)
             .WithOne(player => player.Room)
             .HasForeignKey(player => player.RoomId)

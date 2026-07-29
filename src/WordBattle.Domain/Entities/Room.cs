@@ -14,6 +14,10 @@ public sealed class Room
 
     public DateTime? ClosedAt { get; set; }
 
+    public Guid? RematchRequestedByPlayerId { get; set; }
+
+    public DateTime? RematchRequestedAt { get; set; }
+
     public ICollection<RoomPlayer> Players { get; set; } = [];
 
     public ICollection<GameMatch> Matches { get; set; } = [];
