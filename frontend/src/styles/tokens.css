@@ -1,0 +1,49 @@
+:root {
+  --color-background: #f7f4ee;
+  --color-surface: #fffdf8;
+  --color-surface-raised: #ffffff;
+  --color-text: #201f1c;
+  --color-text-muted: #69645b;
+  --color-border: #d8d1c4;
+  --color-primary: #1f6f68;
+  --color-primary-hover: #185a54;
+  --color-danger: #b42318;
+  --color-warning: #9a6700;
+  --color-success: #16794c;
+  --color-correct: #1f7a4d;
+  --color-present: #b47b12;
+  --color-absent: #6f6a61;
+  --color-focus: #0b63ce;
+
+  --font-sans: 'Atkinson Hyperlegible', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Sora', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  --shadow-sm: 0 1px 2px rgb(32 31 28 / 0.08);
+  --shadow-md: 0 12px 32px rgb(32 31 28 / 0.12);
+
+  --container-narrow: 42rem;
+  --container-page: 72rem;
+
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --focus-ring: 0 0 0 3px rgb(11 99 206 / 0.35);
+
+  /* Breakpoints used by component CSS: mobile 0-639px, tablet 640-1023px, desktop 1024px+. */
+  --breakpoint-tablet: 40rem;
+  --breakpoint-desktop: 64rem;
+}
