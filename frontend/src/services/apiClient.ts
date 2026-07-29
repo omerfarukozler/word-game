@@ -5,15 +5,13 @@ export interface ApiRequestOptions {
 }
 
 const JSON_CONTENT_TYPE = 'application/json'
+const DEFAULT_API_BASE_URL = 'http://localhost:5050'
 
-function getApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL
+  const baseUrl = configuredBaseUrl || DEFAULT_API_BASE_URL
 
-  if (!configuredBaseUrl) {
-    throw new Error('VITE_API_BASE_URL is not configured.')
-  }
-
-  return configuredBaseUrl.replace(/\/+$/, '')
+  return baseUrl.replace(/\/+$/, '')
 }
 
 export function buildApiUrl(path: string): string {

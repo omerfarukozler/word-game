@@ -6,6 +6,7 @@ import {
 } from '@microsoft/signalr'
 import type { GameHubHandlers } from '../types/realtime'
 import { normalizeRoomCode } from '../utils/roomCode'
+import { getApiBaseUrl } from './apiClient'
 import { HubMethods, RealtimeEvents } from './realtimeEvents'
 
 export interface GameHubClient {
@@ -15,17 +16,12 @@ export interface GameHubClient {
   subscribeToRoom: (roomCode: string) => Promise<void>
   unsubscribeFromRoom: (roomCode: string) => Promise<void>
   registerHandlers: (handlers: Partial<GameHubHandlers>) => () => void
+  onReconnected: (handler: () => void) => () => void
   setReconnectRoom: (roomCode: string | null) => void
 }
 
 function getHubUrl(): string {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL
-
-  if (!baseUrl) {
-    throw new Error('VITE_API_BASE_URL is not configured.')
-  }
-
-  return `${baseUrl.replace(/\/+$/, '')}/hubs/game`
+  return `${getApiBaseUrl()}/hubs/game`
 }
 
 export function createGameHubClient(): GameHubClient {
@@ -37,10 +33,16 @@ export function createGameHubClient(): GameHubClient {
     .configureLogging(LogLevel.Warning)
     .build()
 
+  const reconnectHandlers = new Set<() => void>()
+
   connection.onreconnected(() => {
     if (reconnectRoomCode) {
       void connection.invoke(HubMethods.SubscribeToRoom, reconnectRoomCode)
     }
+
+    reconnectHandlers.forEach((handler) => {
+      handler()
+    })
   })
 
   async function start() {
@@ -133,6 +135,13 @@ export function createGameHubClient(): GameHubClient {
     subscribeToRoom,
     unsubscribeFromRoom,
     registerHandlers,
+    onReconnected(handler) {
+      reconnectHandlers.add(handler)
+
+      return () => {
+        reconnectHandlers.delete(handler)
+      }
+    },
     setReconnectRoom(roomCode) {
       reconnectRoomCode = roomCode ? normalizeRoomCode(roomCode) : null
     },

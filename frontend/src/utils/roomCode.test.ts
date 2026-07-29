@@ -3,7 +3,7 @@ import { isRoomCodeLike, normalizeRoomCode } from './roomCode'
 
 describe('roomCode utilities', () => {
   it('trims and uppercases room codes', () => {
-    expect(normalizeRoomCode(' ab12cd ')).toBe('AB12CD')
+    expect(normalizeRoomCode(' ab 12 cd ')).toBe('AB12CD')
   })
 
   it('validates normalized six-character codes', () => {

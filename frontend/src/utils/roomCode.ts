@@ -1,5 +1,5 @@
 export function normalizeRoomCode(roomCode: string): string {
-  return roomCode.trim().toUpperCase()
+  return roomCode.trim().replace(/\s+/g, '').toUpperCase()
 }
 
 export function isRoomCodeLike(roomCode: string): boolean {

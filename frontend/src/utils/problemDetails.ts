@@ -4,10 +4,25 @@ const friendlyDetailByBackendMessage = new Map<string, string>([
   ['Room not found.', 'Oda bulunamadı. Kodu kontrol edip tekrar deneyin.'],
   ['Room is full.', 'Bu oda dolu. Yeni bir oda oluşturun veya farklı bir kod deneyin.'],
   [
+    'Room is closed.',
+    'Bu oda kapalı. Yeni bir oda oluşturun veya farklı bir kod deneyin.',
+  ],
+  ['Game has already started.', 'Bu odada oyun başlamış. Yeni bir oda oluşturun.'],
+  [
     'Nickname is already in use in this room.',
     'Bu odada bu nickname kullanılıyor. Farklı bir nickname seçin.',
   ],
   ['Invalid player token.', 'Oyuncu oturumu geçersiz. Odaya yeniden katılın.'],
+  ['Room code is required.', 'Oda kodu gerekli. Kodu kontrol edip tekrar deneyin.'],
+  [
+    'The room is waiting for another player.',
+    'Maçı başlatmak için ikinci oyuncunun katılması gerekiyor.',
+  ],
+  ['A match is already in progress.', 'Bu odada maç zaten başlamış.'],
+  [
+    'A new match must be started through the rematch flow.',
+    'Bu odada ilk maç tamamlandı. Tekrar oynama akışı sonraki fazda eklenecek.',
+  ],
 ])
 
 export class ApiError extends Error {
