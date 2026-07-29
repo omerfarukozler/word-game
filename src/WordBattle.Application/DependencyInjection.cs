@@ -10,6 +10,7 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+        services.AddSingleton<IGuessEvaluator, GuessEvaluator>();
         services.AddScoped<IRoomService, RoomService>();
         services.AddScoped<IMatchService, MatchService>();
 
