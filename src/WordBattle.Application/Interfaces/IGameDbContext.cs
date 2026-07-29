@@ -13,5 +13,7 @@ public interface IGameDbContext
 
     DbSet<Guess> Guesses { get; }
 
+    DbSet<GameWord> GameWords { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

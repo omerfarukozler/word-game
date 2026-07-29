@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WordBattle.Application.Interfaces;
 using WordBattle.Infrastructure.Persistence;
+using WordBattle.Infrastructure.Words;
 
 namespace WordBattle.Infrastructure;
 
@@ -21,6 +22,7 @@ public static class DependencyInjection
 
         services.AddDbContext<IGameDbContext, GameDbContext>(options =>
             options.UseNpgsql(connectionString));
+        services.AddScoped<IWordProvider, DatabaseWordProvider>();
 
         return services;
     }

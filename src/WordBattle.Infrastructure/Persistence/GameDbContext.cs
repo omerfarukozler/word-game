@@ -15,6 +15,8 @@ public sealed class GameDbContext(DbContextOptions<GameDbContext> options)
 
     public DbSet<Guess> Guesses => Set<Guess>();
 
+    public DbSet<GameWord> GameWords => Set<GameWord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(GameDbContext).Assembly);

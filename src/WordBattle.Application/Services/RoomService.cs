@@ -13,6 +13,7 @@ namespace WordBattle.Application.Services;
 public sealed class RoomService(
     IGameDbContext dbContext,
     IGameNotifier gameNotifier,
+    IWordProvider wordProvider,
     ILogger<RoomService> logger) : IRoomService
 {
     private const string RoomCodeCharacters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -246,13 +247,13 @@ public sealed class RoomService(
             throw new BusinessRuleException("An active match already exists in this room.");
         }
 
+        var targetWord = await wordProvider.GetRandomWordAsync(5, cancellationToken);
         var startedAt = DateTime.UtcNow;
         var match = new GameMatch
         {
             Id = Guid.NewGuid(),
             RoomId = room.Id,
-            // Temporary target word. Replaced by the word provider in Phase 6.2.
-            TargetWord = "ELMAS",
+            TargetWord = targetWord,
             Status = MatchStatus.Playing,
             WinnerPlayerId = null,
             StartedAt = startedAt,
