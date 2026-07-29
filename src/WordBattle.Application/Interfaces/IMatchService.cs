@@ -5,8 +5,8 @@ namespace WordBattle.Application.Interfaces;
 
 public interface IMatchService
 {
-    Task<GuessResponse> GuessAsync(
-        Guid id,
-        GuessRequest request,
+    Task<SubmitGuessResponse> SubmitGuessAsync(
+        Guid matchId,
+        SubmitGuessRequest request,
         CancellationToken cancellationToken = default);
 }
