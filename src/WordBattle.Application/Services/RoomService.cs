@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using WordBattle.Application.Dtos.Requests;
 using WordBattle.Application.Dtos.Responses;
 using WordBattle.Application.Exceptions;
@@ -9,51 +10,18 @@ using WordBattle.Domain.Enums;
 
 namespace WordBattle.Application.Services;
 
-public sealed class RoomService(IGameDbContext dbContext, IGameNotifier gameNotifier) : IRoomService
+public sealed class RoomService(
+    IGameDbContext dbContext,
+    IGameNotifier gameNotifier,
+    ILogger<RoomService> logger) : IRoomService
 {
     private const string RoomCodeCharacters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private const int RoomCodeLength = 6;
     private const int MaxRoomCodeGenerationAttempts = 10;
 
-    public Task<CreateRoomResponse> CreateAsync(
+    public async Task<CreateRoomResponse> CreateAsync(
         CreateRoomRequest request,
         CancellationToken cancellationToken = default)
-    {
-        return CreateRoomAsync(request, cancellationToken);
-    }
-
-    public Task<JoinRoomResponse> JoinAsync(
-        string code,
-        JoinRoomRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        return JoinRoomAsync(code, request, cancellationToken);
-    }
-
-    public Task<RoomResponse> GetAsync(
-        string code,
-        CancellationToken cancellationToken = default)
-    {
-        return GetRoomAsync(code, cancellationToken);
-    }
-
-    public Task<MatchResponse> StartAsync(
-        string code,
-        CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<MatchResponse> RematchAsync(
-        string code,
-        CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    private async Task<CreateRoomResponse> CreateRoomAsync(
-        CreateRoomRequest request,
-        CancellationToken cancellationToken)
     {
         var room = new Room
         {
@@ -91,10 +59,10 @@ public sealed class RoomService(IGameDbContext dbContext, IGameNotifier gameNoti
         };
     }
 
-    private async Task<JoinRoomResponse> JoinRoomAsync(
+    public async Task<JoinRoomResponse> JoinAsync(
         string code,
         JoinRoomRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
@@ -152,16 +120,22 @@ public sealed class RoomService(IGameDbContext dbContext, IGameNotifier gameNoti
         };
 
         dbContext.RoomPlayers.Add(newPlayer);
-
-        if (room.Players.Count == 2)
-        {
-            room.Status = RoomStatus.Ready;
-        }
+        room.Status = RoomStatus.Ready;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var roomUpdated = await GetRoomForNotificationAsync(room.Code, cancellationToken);
-        await gameNotifier.RoomUpdatedAsync(room.Code, roomUpdated, cancellationToken);
+        try
+        {
+            var roomUpdated = await GetRoomForNotificationAsync(room.Code, cancellationToken);
+            await gameNotifier.RoomUpdatedAsync(room.Code, roomUpdated, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "RoomUpdated notification could not be sent for room {RoomCode}",
+                room.Code);
+        }
 
         return new JoinRoomResponse
         {
@@ -172,9 +146,9 @@ public sealed class RoomService(IGameDbContext dbContext, IGameNotifier gameNoti
         };
     }
 
-    private async Task<RoomResponse> GetRoomAsync(
+    public async Task<RoomResponse> GetAsync(
         string code,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
@@ -195,6 +169,132 @@ public sealed class RoomService(IGameDbContext dbContext, IGameNotifier gameNoti
         }
 
         return MapRoom(room);
+    }
+
+    public async Task<MatchResponse> StartAsync(
+        string code,
+        StartMatchRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new BusinessRuleException("Room code is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.PlayerToken))
+        {
+            throw new BusinessRuleException("Player token is required.");
+        }
+
+        code = code.Trim().ToUpperInvariant();
+        var playerToken = request.PlayerToken.Trim();
+
+        var room = await dbContext.Rooms
+            .Include(room => room.Players)
+            .Include(room => room.Matches)
+            .FirstOrDefaultAsync(room => room.Code == code, cancellationToken);
+
+        if (room is null)
+        {
+            throw new NotFoundException("Room not found.");
+        }
+
+        var player = room.Players.FirstOrDefault(player =>
+            player.PlayerToken == playerToken);
+
+        if (player is null)
+        {
+            throw new BusinessRuleException("Invalid player token.");
+        }
+
+        if (!player.IsHost)
+        {
+            throw new BusinessRuleException("Only the room host can start the match.");
+        }
+
+        if (room.Status == RoomStatus.Closed)
+        {
+            throw new BusinessRuleException("Room is closed.");
+        }
+
+        if (room.Status == RoomStatus.WaitingForPlayer)
+        {
+            throw new BusinessRuleException("The room is waiting for another player.");
+        }
+
+        if (room.Status == RoomStatus.Playing)
+        {
+            throw new BusinessRuleException("A match is already in progress.");
+        }
+
+        if (room.Status != RoomStatus.Ready)
+        {
+            throw new BusinessRuleException("The room is not ready to start.");
+        }
+
+        if (room.Players.Count != 2)
+        {
+            throw new BusinessRuleException("Exactly two players are required to start a match.");
+        }
+
+        var hasActiveMatch = room.Matches.Any(match =>
+            match.Status == MatchStatus.Waiting ||
+            match.Status == MatchStatus.Playing);
+
+        if (hasActiveMatch)
+        {
+            throw new BusinessRuleException("An active match already exists in this room.");
+        }
+
+        var startedAt = DateTime.UtcNow;
+        var match = new GameMatch
+        {
+            Id = Guid.NewGuid(),
+            RoomId = room.Id,
+            // Temporary target word. Replaced by the word provider in Phase 6.2.
+            TargetWord = "ELMAS",
+            Status = MatchStatus.Playing,
+            WinnerPlayerId = null,
+            StartedAt = startedAt,
+            CompletedAt = null
+        };
+
+        dbContext.Matches.Add(match);
+        room.Status = RoomStatus.Playing;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var response = new MatchResponse
+        {
+            Id = match.Id,
+            RoomId = match.RoomId,
+            Status = match.Status,
+            WinnerPlayerId = match.WinnerPlayerId,
+            StartedAt = match.StartedAt,
+            CompletedAt = match.CompletedAt
+        };
+
+        try
+        {
+            await gameNotifier.MatchStartedAsync(room.Code, response, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "MatchStarted notification could not be sent for room {RoomCode} and match {MatchId}",
+                room.Code,
+                match.Id);
+        }
+
+        return response;
+    }
+
+    public Task<MatchResponse> RematchAsync(
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
 
     private static RoomResponse MapRoom(Room room)

@@ -4,14 +4,14 @@ namespace WordBattle.Api.Hubs;
 
 public sealed class GameHub : Hub
 {
-    public Task JoinRoom(string roomCode)
+    public Task SubscribeToRoom(string roomCode)
     {
         roomCode = roomCode.Trim().ToUpperInvariant();
 
         return Groups.AddToGroupAsync(Context.ConnectionId, roomCode, Context.ConnectionAborted);
     }
 
-    public Task LeaveRoom(string roomCode)
+    public Task UnsubscribeFromRoom(string roomCode)
     {
         roomCode = roomCode.Trim().ToUpperInvariant();
 

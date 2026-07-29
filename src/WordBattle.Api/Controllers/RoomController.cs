@@ -53,9 +53,10 @@ public sealed class RoomController(IRoomService roomService) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<MatchResponse>> Start(
         string code,
+        [FromBody] StartMatchRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await roomService.StartAsync(code, cancellationToken);
+        var response = await roomService.StartAsync(code, request, cancellationToken);
 
         return Ok(response);
     }

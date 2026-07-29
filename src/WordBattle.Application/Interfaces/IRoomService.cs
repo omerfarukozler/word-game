@@ -20,6 +20,7 @@ public interface IRoomService
 
     Task<MatchResponse> StartAsync(
         string code,
+        StartMatchRequest request,
         CancellationToken cancellationToken = default);
 
     Task<MatchResponse> RematchAsync(

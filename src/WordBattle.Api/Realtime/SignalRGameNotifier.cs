@@ -8,6 +8,7 @@ namespace WordBattle.Api.Realtime;
 public sealed class SignalRGameNotifier(IHubContext<GameHub> hubContext) : IGameNotifier
 {
     private const string RoomUpdatedEventName = "RoomUpdated";
+    private const string MatchStartedEventName = "MatchStarted";
 
     public Task RoomUpdatedAsync(
         string roomCode,
@@ -19,5 +20,17 @@ public sealed class SignalRGameNotifier(IHubContext<GameHub> hubContext) : IGame
         return hubContext.Clients
             .Group(normalizedRoomCode)
             .SendAsync(RoomUpdatedEventName, room, cancellationToken);
+    }
+
+    public Task MatchStartedAsync(
+        string roomCode,
+        MatchResponse match,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedRoomCode = roomCode.Trim().ToUpperInvariant();
+
+        return hubContext.Clients
+            .Group(normalizedRoomCode)
+            .SendAsync(MatchStartedEventName, match, cancellationToken);
     }
 }

@@ -8,4 +8,9 @@ public interface IGameNotifier
         string roomCode,
         RoomResponse room,
         CancellationToken cancellationToken = default);
+
+    Task MatchStartedAsync(
+        string roomCode,
+        MatchResponse match,
+        CancellationToken cancellationToken = default);
 }
