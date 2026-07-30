@@ -23,6 +23,17 @@ const friendlyDetailByBackendMessage = new Map<string, string>([
     'A new match must be started through the rematch flow.',
     'Bu odada ilk maç tamamlandı. Tekrar oynama akışı sonraki fazda eklenecek.',
   ],
+  ['Player token is required.', 'Oyuncu oturumu geçersiz. Odaya yeniden katılın.'],
+  ['Guess word is required.', 'Tahmin kelimesi boş olamaz.'],
+  ['Match id is required.', 'Maç bilgisi eksik. Odaya yeniden katılın.'],
+  ['Match not found.', 'Maç bulunamadı. Odaya yeniden katılın.'],
+  ['The match is not currently active.', 'Bu maç şu anda tahmin kabul etmiyor.'],
+  ['The room is not currently playing.', 'Bu oda şu anda oyun durumunda değil.'],
+  ['Guess word must contain exactly 5 characters.', 'Tahmin 5 harf olmalıdır.'],
+  [
+    'The guessed word is not in the word list.',
+    'Bu kelime kabul edilmedi. Tahminini düzenleyip tekrar gönder.',
+  ],
 ])
 
 export class ApiError extends Error {

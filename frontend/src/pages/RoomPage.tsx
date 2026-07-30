@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { GameScreen } from '../features/game/components/GameScreen'
 import { PlayerList } from '../features/room/components/PlayerList'
 import { RoomHeader } from '../features/room/components/RoomHeader'
 import { WaitingRoomPanel } from '../features/room/components/WaitingRoomPanel'
@@ -59,8 +60,13 @@ function RoomPageContent({ roomCode }: { roomCode: string }) {
     connectionState,
     isStartingMatch,
     startError,
+    submittedGuesses,
+    matchResult,
     startMatch,
+    recordSubmittedGuess,
+    recordMatchCompleted,
   } = useRoomSession(roomCode, session!)
+  const connectionLabel = getConnectionLabel(connectionState)
 
   return (
     <main className="page-shell room-page" aria-labelledby="room-title">
@@ -89,22 +95,37 @@ function RoomPageContent({ roomCode }: { roomCode: string }) {
 
       {!isRoomLoading && room && (
         <>
-          <RoomHeader room={room} />
-          <p className="connection-note" role="status" aria-live="polite">
-            Gerçek zamanlı oda bağlantısı: {getConnectionLabel(connectionState)}
-          </p>
-
-          <div className="room-layout">
-            <PlayerList players={room.players} currentPlayerId={session!.playerId} />
-            <WaitingRoomPanel
+          {currentMatch ? (
+            <GameScreen
               room={room}
-              currentMatch={currentMatch}
-              isHost={session!.isHost}
-              isStartingMatch={isStartingMatch}
-              startError={startError}
-              onStartMatch={startMatch}
+              match={currentMatch}
+              session={session!}
+              guesses={submittedGuesses}
+              matchResult={matchResult}
+              connectionLabel={connectionLabel}
+              onGuessSubmitted={recordSubmittedGuess}
+              onMatchCompleted={recordMatchCompleted}
             />
-          </div>
+          ) : (
+            <>
+              <RoomHeader room={room} />
+              <p className="connection-note" role="status" aria-live="polite">
+                Gerçek zamanlı oda bağlantısı: {connectionLabel}
+              </p>
+
+              <div className="room-layout">
+                <PlayerList players={room.players} currentPlayerId={session!.playerId} />
+                <WaitingRoomPanel
+                  room={room}
+                  currentMatch={currentMatch}
+                  isHost={session!.isHost}
+                  isStartingMatch={isStartingMatch}
+                  startError={startError}
+                  onStartMatch={startMatch}
+                />
+              </div>
+            </>
+          )}
         </>
       )}
     </main>

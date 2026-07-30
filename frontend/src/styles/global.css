@@ -676,6 +676,228 @@ h2 {
   animation-delay: 180ms;
 }
 
+.game-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, auto);
+  gap: var(--space-5);
+  align-items: end;
+  padding: var(--space-6);
+  border: 1px solid rgb(169 159 144 / 0.5);
+  border-radius: var(--radius-xl);
+  background:
+    linear-gradient(135deg, rgb(255 253 248 / 0.98), rgb(239 232 218 / 0.78)),
+    var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.game-header h1 {
+  max-width: none;
+  font-size: clamp(2rem, 7vw, 4rem);
+}
+
+.game-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.game-panel {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid rgb(216 209 196 / 0.78);
+  border-radius: var(--radius-xl);
+  background: rgb(255 253 248 / 0.9);
+  box-shadow: var(--shadow-card);
+}
+
+.game-panel p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.guess-grid {
+  display: grid;
+  gap: var(--game-tile-gap);
+  overflow-x: hidden;
+}
+
+.guess-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, var(--game-tile-size)));
+  gap: var(--game-tile-gap);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.game-letter-tile {
+  width: min(var(--game-tile-size), calc((100vw - 3.5rem) / 5));
+  font-size: var(--game-tile-font-size);
+  text-transform: uppercase;
+  transition:
+    transform var(--motion-fast) var(--ease-emphasized),
+    background-color var(--motion-normal) var(--ease-standard),
+    border-color var(--motion-normal) var(--ease-standard);
+}
+
+.game-letter-tile--empty {
+  border-color: var(--color-border);
+  background: rgb(255 255 255 / 0.72);
+  color: transparent;
+}
+
+.game-letter-tile--filled {
+  border-color: var(--color-primary);
+  background: var(--color-surface-elevated);
+  animation: tile-pop var(--motion-fast) var(--ease-emphasized) both;
+}
+
+.game-letter-tile--submitting {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.game-letter-tile--correct {
+  animation: tile-reveal var(--motion-slow) var(--ease-standard) both;
+  animation-delay: calc(var(--tile-index) * 70ms);
+}
+
+.game-letter-tile--present {
+  animation: tile-reveal var(--motion-slow) var(--ease-standard) both;
+  animation-delay: calc(var(--tile-index) * 70ms);
+}
+
+.game-letter-tile--absent {
+  animation: tile-reveal var(--motion-slow) var(--ease-standard) both;
+  animation-delay: calc(var(--tile-index) * 70ms);
+}
+
+.game-letter-tile--masked {
+  border-style: dashed;
+  border-color: rgb(111 106 97 / 0.45);
+  background: var(--color-surface-muted);
+  color: transparent;
+}
+
+.guess-row--correct {
+  animation: correct-pulse var(--motion-slow) var(--ease-emphasized) both;
+}
+
+.current-guess-row--shake {
+  animation: invalid-shake var(--motion-slow) var(--ease-standard) both;
+}
+
+.input-panel {
+  gap: var(--space-3);
+}
+
+.virtual-keyboard {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.keyboard-row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.keyboard-row:nth-child(1) {
+  padding-inline: min(4vw, var(--space-5));
+}
+
+.keyboard-row:nth-child(2) {
+  padding-inline: min(6vw, var(--space-8));
+}
+
+.keyboard-key {
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0;
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+.keyboard-key:not(:disabled):hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.keyboard-key:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.keyboard-key--wide {
+  grid-column: span 2;
+  font-size: 0.78rem;
+}
+
+.keyboard-key--correct {
+  border-color: var(--color-correct);
+  background: var(--color-correct);
+  color: #ffffff;
+}
+
+.keyboard-key--present {
+  border-color: var(--color-present);
+  background: var(--color-present);
+  color: #ffffff;
+}
+
+.keyboard-key--absent {
+  border-color: var(--color-absent);
+  background: var(--color-absent);
+  color: #ffffff;
+}
+
+.opponent-panel .guess-row {
+  opacity: 0.92;
+}
+
+.result-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.result-stats div {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  background: var(--color-surface-elevated);
+}
+
+.result-stats dt {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.result-stats dd {
+  margin: var(--space-1) 0 0;
+  font-weight: 900;
+}
+
 @media (min-width: 64rem) {
   .page-shell {
     padding: var(--space-12) 0;
@@ -700,7 +922,9 @@ h2 {
   }
 
   .room-header,
-  .room-layout {
+  .room-layout,
+  .game-header,
+  .game-layout {
     grid-template-columns: 1fr;
   }
 
@@ -721,6 +945,34 @@ h2 {
 
   .button {
     width: 100%;
+  }
+
+  .game-panel,
+  .game-header {
+    padding: var(--space-4);
+  }
+
+  .game-header__meta {
+    justify-content: flex-start;
+  }
+
+  .keyboard-row,
+  .keyboard-row:nth-child(1),
+  .keyboard-row:nth-child(2) {
+    padding-inline: 0;
+  }
+
+  .keyboard-key {
+    min-height: 42px;
+    font-size: 0.86rem;
+  }
+
+  .keyboard-key--wide {
+    font-size: 0.72rem;
+  }
+
+  .result-stats {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -763,6 +1015,40 @@ h2 {
   to {
     opacity: 1;
     transform: translateY(-0.18rem);
+  }
+}
+
+@keyframes tile-reveal {
+  from {
+    transform: rotateX(90deg);
+  }
+
+  to {
+    transform: rotateX(0deg);
+  }
+}
+
+@keyframes invalid-shake {
+  20% {
+    transform: translateX(-0.35rem);
+  }
+
+  40% {
+    transform: translateX(0.35rem);
+  }
+
+  60% {
+    transform: translateX(-0.2rem);
+  }
+
+  80% {
+    transform: translateX(0.2rem);
+  }
+}
+
+@keyframes correct-pulse {
+  50% {
+    transform: scale(1.015);
   }
 }
 

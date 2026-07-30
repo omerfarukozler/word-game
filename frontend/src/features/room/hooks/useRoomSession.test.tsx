@@ -154,6 +154,90 @@ describe('useRoomSession', () => {
     expect(result.current.room?.status).toBe(RoomStatus.Playing)
   })
 
+  it('handles GuessSubmitted events idempotently by guess id', async () => {
+    vi.mocked(getRoom).mockResolvedValue(
+      roomSnapshot({
+        status: RoomStatus.Playing,
+        matches: [playingMatch()],
+      }),
+    )
+    const { result } = renderHook(() => useRoomSession('ABC123', session))
+
+    await waitFor(() => {
+      expect(result.current.currentMatch?.id).toBe('match-1')
+    })
+
+    act(() => {
+      registeredHandlers.guessSubmitted?.({
+        id: 'guess-1',
+        matchId: 'match-1',
+        playerId: 'host-1',
+        word: 'ÇİĞDE',
+        attemptNumber: 1,
+        evaluation: [
+          { position: 0, letter: 'Ç', status: 2 },
+          { position: 1, letter: 'İ', status: 0 },
+          { position: 2, letter: 'Ğ', status: 1 },
+          { position: 3, letter: 'D', status: 0 },
+          { position: 4, letter: 'E', status: 0 },
+        ],
+        submittedAt: '2026-07-29T18:06:00Z',
+      })
+      registeredHandlers.guessSubmitted?.({
+        id: 'guess-1',
+        matchId: 'match-1',
+        playerId: 'host-1',
+        word: 'ÇİĞDE',
+        attemptNumber: 1,
+        evaluation: [
+          { position: 0, letter: 'Ç', status: 2 },
+          { position: 1, letter: 'İ', status: 0 },
+          { position: 2, letter: 'Ğ', status: 1 },
+          { position: 3, letter: 'D', status: 0 },
+          { position: 4, letter: 'E', status: 0 },
+        ],
+        submittedAt: '2026-07-29T18:06:00Z',
+      })
+    })
+
+    expect(result.current.submittedGuesses).toHaveLength(1)
+    expect(result.current.submittedGuesses[0]?.word).toBe('ÇİĞDE')
+  })
+
+  it('applies MatchCompleted notifications idempotently', async () => {
+    vi.mocked(getRoom).mockResolvedValue(
+      roomSnapshot({
+        status: RoomStatus.Playing,
+        matches: [playingMatch()],
+      }),
+    )
+    const { result } = renderHook(() => useRoomSession('ABC123', session))
+
+    await waitFor(() => {
+      expect(result.current.currentMatch?.id).toBe('match-1')
+    })
+
+    act(() => {
+      registeredHandlers.matchCompleted?.({
+        matchId: 'match-1',
+        winnerPlayerId: 'host-1',
+        completedAt: '2026-07-29T18:07:00Z',
+      })
+      registeredHandlers.matchCompleted?.({
+        matchId: 'match-1',
+        winnerPlayerId: 'host-1',
+        completedAt: '2026-07-29T18:07:00Z',
+      })
+    })
+
+    expect(result.current.currentMatch?.status).toBe(MatchStatus.Completed)
+    expect(result.current.matchResult).toEqual({
+      matchId: 'match-1',
+      winnerPlayerId: 'host-1',
+      completedAt: '2026-07-29T18:07:00Z',
+    })
+  })
+
   it('refreshes the room snapshot after reconnect', async () => {
     vi.mocked(getRoom)
       .mockResolvedValueOnce(roomSnapshot())

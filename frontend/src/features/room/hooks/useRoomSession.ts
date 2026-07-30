@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { SubmitGuessResponse } from '../../../types/api'
+import type {
+  GuessSubmittedNotification,
+  MatchCompletedNotification,
+} from '../../../types/realtime'
+import type { GameGuess, MatchResult } from '../../game/types'
 import { createGameHubClient } from '../../../services/gameHub'
 import { getRoom, startMatch } from '../../../services/roomApi'
-import { RoomStatus, type Match, type Room } from '../../../types/domain'
+import { MatchStatus, RoomStatus, type Match, type Room } from '../../../types/domain'
 import type { PlayerSession } from '../../../session/playerSessionStorage'
 import { upsertById } from '../../../utils/dedupe'
 import { toFriendlyErrorMessage } from '../../../utils/problemDetails'
@@ -24,11 +30,100 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle')
   const [startError, setStartError] = useState<string | null>(null)
   const [isStartingMatch, setIsStartingMatch] = useState(false)
+  const [submittedGuesses, setSubmittedGuesses] = useState<GameGuess[]>([])
+  const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
   const loadSequenceRef = useRef(0)
 
   const applyRoomSnapshot = useCallback((nextRoom: Room) => {
+    const nextCurrentMatch = selectCurrentMatch(nextRoom)
     setRoom(nextRoom)
-    setCurrentMatch(selectCurrentMatch(nextRoom))
+    setCurrentMatch(nextCurrentMatch)
+    setMatchResult(
+      nextCurrentMatch?.status === MatchStatus.Completed &&
+        nextCurrentMatch.winnerPlayerId &&
+        nextCurrentMatch.completedAt
+        ? {
+            matchId: nextCurrentMatch.id,
+            winnerPlayerId: nextCurrentMatch.winnerPlayerId,
+            completedAt: nextCurrentMatch.completedAt,
+          }
+        : null,
+    )
+  }, [])
+
+  const recordSubmittedGuess = useCallback(
+    (guess: GuessSubmittedNotification | SubmitGuessResponse) => {
+      const isCorrect = 'isCorrect' in guess ? guess.isCorrect : undefined
+
+      setSubmittedGuesses((previousGuesses) => {
+        const nextGuess: GameGuess = {
+          id: guess.id,
+          matchId: guess.matchId,
+          playerId: guess.playerId,
+          word: guess.word,
+          attemptNumber: guess.attemptNumber,
+          evaluation: guess.evaluation,
+          submittedAt: guess.submittedAt,
+          isCorrect,
+        }
+        const existingIndex = previousGuesses.findIndex(
+          (item) => item.id === nextGuess.id,
+        )
+
+        if (existingIndex === -1) {
+          return [...previousGuesses, nextGuess].sort(
+            (left, right) => left.attemptNumber - right.attemptNumber,
+          )
+        }
+
+        return previousGuesses.map((item, index) =>
+          index === existingIndex ? { ...item, ...nextGuess } : item,
+        )
+      })
+    },
+    [],
+  )
+
+  const recordMatchCompleted = useCallback((notification: MatchCompletedNotification) => {
+    setMatchResult((previousResult) => {
+      if (previousResult?.matchId === notification.matchId) {
+        return previousResult
+      }
+
+      return notification
+    })
+    setCurrentMatch((previousMatch) => {
+      if (!previousMatch || previousMatch.id !== notification.matchId) {
+        return previousMatch
+      }
+
+      return {
+        ...previousMatch,
+        status: MatchStatus.Completed,
+        winnerPlayerId: notification.winnerPlayerId,
+        completedAt: notification.completedAt,
+      }
+    })
+    setRoom((previousRoom) => {
+      if (!previousRoom) {
+        return previousRoom
+      }
+
+      return {
+        ...previousRoom,
+        status: RoomStatus.Ready,
+        matches: previousRoom.matches.map((match) =>
+          match.id === notification.matchId
+            ? {
+                ...match,
+                status: MatchStatus.Completed,
+                winnerPlayerId: notification.winnerPlayerId,
+                completedAt: notification.completedAt,
+              }
+            : match,
+        ),
+      }
+    })
   }, [])
 
   const applyMatchStarted = useCallback((match: Match) => {
@@ -52,6 +147,10 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
     })
     setIsStartingMatch(false)
     setStartError(null)
+    setSubmittedGuesses((previousGuesses) =>
+      previousGuesses.filter((guess) => guess.matchId === match.id),
+    )
+    setMatchResult(null)
   }, [])
 
   const loadRoom = useCallback(
@@ -107,6 +206,12 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
       matchStarted: (match) => {
         applyMatchStarted(match)
       },
+      guessSubmitted: (guess) => {
+        recordSubmittedGuess(guess)
+      },
+      matchCompleted: (notification) => {
+        recordMatchCompleted(notification)
+      },
     })
 
     const unregisterReconnectHandler = hubClient.onReconnected(() => {
@@ -146,7 +251,14 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
           void hubClient.stop().catch(() => undefined)
         })
     }
-  }, [applyMatchStarted, applyRoomSnapshot, loadRoom, normalizedRoomCode])
+  }, [
+    applyMatchStarted,
+    applyRoomSnapshot,
+    loadRoom,
+    normalizedRoomCode,
+    recordMatchCompleted,
+    recordSubmittedGuess,
+  ])
 
   const handleStartMatch = useCallback(async () => {
     if (isStartingMatch) {
@@ -176,7 +288,11 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
     connectionState,
     isStartingMatch,
     startError,
+    submittedGuesses,
+    matchResult,
     loadRoom,
     startMatch: handleStartMatch,
+    recordSubmittedGuess,
+    recordMatchCompleted,
   }
 }

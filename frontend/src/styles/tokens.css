@@ -69,6 +69,9 @@
   --tile-gap: 0.45rem;
   --tile-border: 2px;
   --tile-font-size: clamp(1.35rem, 5vw, 2.15rem);
+  --game-tile-size: clamp(2.75rem, 15vw, 4.2rem);
+  --game-tile-gap: 0.35rem;
+  --game-tile-font-size: clamp(1.45rem, 6vw, 2.1rem);
 
   /* Breakpoints used by component CSS: mobile 0-639px, tablet 640-1023px, desktop 1024px+. */
   --breakpoint-tablet: 40rem;

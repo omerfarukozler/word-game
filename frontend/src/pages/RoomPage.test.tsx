@@ -224,7 +224,8 @@ describe('RoomPage', () => {
 
     renderRoomPage()
 
-    expect(await screen.findByText(/tekrar oynama seçenekleri/i)).toBeInTheDocument()
+    expect(await screen.findByText(/tur tamamlandı/i)).toBeInTheDocument()
+    expect(screen.getByText(/aynı odada yeni bir karşılaşma/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /maçı başlat/i })).not.toBeInTheDocument()
   })
 
@@ -249,9 +250,10 @@ describe('RoomPage', () => {
     renderRoomPage()
 
     expect(
-      await screen.findByRole('heading', { name: /maç başladı/i }),
+      await screen.findByRole('heading', { name: /kelime savaşı/i }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/oyun alanına hazırlanıyorsunuz/i)).toBeInTheDocument()
+    expect(screen.getByRole('grid', { name: /kendi tahmin tahtan/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tahmini gönder/i })).toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: /tahmin/i })).not.toBeInTheDocument()
   })
 
