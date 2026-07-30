@@ -77,9 +77,40 @@ export function GameScreen({
       </div>
 
       <section className="game-panel input-panel" aria-labelledby="guess-input-title">
-        <div>
-          <p className="eyebrow">Tahmin</p>
-          <h2 id="guess-input-title">Aktif giriş</h2>
+        <div className="input-panel__header">
+          <div>
+            <p className="eyebrow">Tahmin</p>
+            <h2 id="guess-input-title">Aktif giriş</h2>
+          </div>
+          <dl className="evaluation-legend" aria-label="Renk açıklamaları">
+            <div>
+              <dt>
+                <span
+                  className="evaluation-legend__swatch evaluation-legend__swatch--correct"
+                  aria-hidden="true"
+                />
+                Doğru yerde
+              </dt>
+            </div>
+            <div>
+              <dt>
+                <span
+                  className="evaluation-legend__swatch evaluation-legend__swatch--present"
+                  aria-hidden="true"
+                />
+                Kelimede var
+              </dt>
+            </div>
+            <div>
+              <dt>
+                <span
+                  className="evaluation-legend__swatch evaluation-legend__swatch--absent"
+                  aria-hidden="true"
+                />
+                Kelimede yok
+              </dt>
+            </div>
+          </dl>
         </div>
         <InlineError id="guess-error" message={gameSession.submitError} />
         {gameSession.submitMessage && (

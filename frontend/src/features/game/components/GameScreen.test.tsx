@@ -129,6 +129,16 @@ describe('GameScreen', () => {
     expect(opponentTile).toHaveTextContent('')
   })
 
+  it('shows compact evaluation legend in the input panel', () => {
+    renderGameScreen()
+
+    const legend = screen.getByLabelText(/renk açıklamaları/i)
+
+    expect(within(legend).getByText(/doğru yerde/i)).toBeInTheDocument()
+    expect(within(legend).getByText(/kelimede var/i)).toBeInTheDocument()
+    expect(within(legend).getByText(/kelimede yok/i)).toBeInTheDocument()
+  })
+
   it('shows winner result without rematch controls', () => {
     renderGameScreen({
       match: {
@@ -147,6 +157,11 @@ describe('GameScreen', () => {
     const result = screen.getByRole('status', { name: '' })
     expect(within(result).getByText(/bu tur rakibin kazandı/i)).toBeInTheDocument()
     expect(screen.getByText(/Bora bu turu kazandı/i)).toBeInTheDocument()
+    expect(within(result).getByText(/kazanan/i)).toBeInTheDocument()
+    expect(within(result).getByText(/senin tahminin/i)).toBeInTheDocument()
+    expect(within(result).getByText(/rakip tahmini/i)).toBeInTheDocument()
+    expect(within(result).getByText(/oda kodu/i)).toBeInTheDocument()
+    expect(within(result).getByText('ABC123')).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: /rematch|tekrar/i }),
     ).not.toBeInTheDocument()

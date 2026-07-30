@@ -21,15 +21,19 @@ export function MatchResultPanel({
 
   return (
     <section className="game-panel match-result-panel" role="status" aria-live="polite">
-      <p className="eyebrow">Tur tamamlandı</p>
-      <h2>{didCurrentPlayerWin ? 'Kazandın!' : 'Bu tur rakibin kazandı.'}</h2>
-      <p>
-        {didCurrentPlayerWin
-          ? 'Kelimeyi rakibinden önce buldun.'
-          : winner
-            ? `${winner.nickname} bu turu kazandı.`
-            : 'Kazanan oyuncu belirlendi.'}
-      </p>
+      <div className="match-result-panel__summary">
+        <div>
+          <p className="eyebrow">Tur tamamlandı</p>
+          <h2>{didCurrentPlayerWin ? 'Kazandın!' : 'Bu tur rakibin kazandı.'}</h2>
+        </div>
+        <p>
+          {didCurrentPlayerWin
+            ? 'Kelimeyi rakibinden önce buldun.'
+            : winner
+              ? `${winner.nickname} bu turu kazandı.`
+              : 'Kazanan oyuncu belirlendi.'}
+        </p>
+      </div>
       <dl className="result-stats">
         <div>
           <dt>Kazanan</dt>
@@ -48,7 +52,9 @@ export function MatchResultPanel({
           <dd>{room.code}</dd>
         </div>
       </dl>
-      <p>Aynı odada yeni bir karşılaşma başlatabileceksiniz.</p>
+      <div className="match-result-panel__actions">
+        <p>Aynı odada yeni bir karşılaşma başlatabileceksiniz.</p>
+      </div>
     </section>
   )
 }
