@@ -114,11 +114,19 @@ describe('GameScreen', () => {
   it('shows own guesses but masks opponent words', () => {
     renderGameScreen()
 
-    expect(screen.getByLabelText(/Ç harfi, 1. pozisyon/i)).toBeInTheDocument()
+    const ownTile = screen.getByLabelText(/Ç harfi, 1. pozisyon/i)
+
+    expect(ownTile).toBeInTheDocument()
+    expect(ownTile).toHaveClass('letter-tile--correct')
     expect(screen.queryByText('ARMUT')).not.toBeInTheDocument()
-    expect(
-      screen.getByLabelText(/rakip 1. tahmininin 1. harfi gizli/i),
-    ).toBeInTheDocument()
+    const opponentTile = screen.getByLabelText(
+      /rakip 1. tahmininin 1. kutusu, kelimede yok/i,
+    )
+
+    expect(opponentTile).toBeInTheDocument()
+    expect(opponentTile).toHaveClass('letter-tile--absent')
+    expect(opponentTile).toHaveClass('game-letter-tile--absent')
+    expect(opponentTile).toHaveTextContent('')
   })
 
   it('shows winner result without rematch controls', () => {

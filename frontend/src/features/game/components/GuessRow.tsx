@@ -1,7 +1,7 @@
 import { CURRENT_WORD_LENGTH } from '../constants/gameRules'
 import type { GameGuess } from '../types'
 import { getLetterTileState } from '../utils/letterTileState'
-import { LetterTile } from './LetterTile'
+import { LetterTile, type LetterTileState } from './LetterTile'
 
 interface GuessRowProps {
   guess: GameGuess
@@ -21,6 +21,14 @@ function getEvaluationLabel(state: string) {
   }
 }
 
+function getOpponentTileLabel(guess: GameGuess, index: number, state: LetterTileState) {
+  if (state === 'masked') {
+    return `Rakip ${guess.attemptNumber}. tahmininin ${index + 1}. harfi gizli`
+  }
+
+  return `Rakip ${guess.attemptNumber}. tahmininin ${index + 1}. kutusu, ${getEvaluationLabel(state)}`
+}
+
 export function GuessRow({ guess, isOwnGuess }: GuessRowProps) {
   const letters = isOwnGuess
     ? Array.from(guess.word)
@@ -34,8 +42,8 @@ export function GuessRow({ guess, isOwnGuess }: GuessRowProps) {
     >
       {letters.map((letter, index) => {
         const evaluation = guess.evaluation[index]
-        const state =
-          isOwnGuess && evaluation ? getLetterTileState(evaluation.status) : 'masked'
+        const state = evaluation ? getLetterTileState(evaluation.status) : 'masked'
+        const displayedPosition = evaluation ? evaluation.position + 1 : index + 1
 
         return (
           <LetterTile
@@ -44,9 +52,9 @@ export function GuessRow({ guess, isOwnGuess }: GuessRowProps) {
             state={state}
             index={index}
             label={
-              isOwnGuess && evaluation
-                ? `${letter} harfi, ${evaluation.position + 1}. pozisyon, ${getEvaluationLabel(state)}`
-                : `Rakip ${guess.attemptNumber}. tahmininin ${index + 1}. harfi gizli`
+              isOwnGuess
+                ? `${letter} harfi, ${displayedPosition}. pozisyon, ${getEvaluationLabel(state)}`
+                : getOpponentTileLabel(guess, index, state)
             }
           />
         )

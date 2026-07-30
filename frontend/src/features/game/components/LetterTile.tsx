@@ -36,7 +36,7 @@ export function LetterTile({ letter = '', state, index, label }: LetterTileProps
 
   return (
     <span
-      className={`letter-tile game-letter-tile game-letter-tile--${state}`}
+      className={`letter-tile letter-tile--${state} game-letter-tile game-letter-tile--${state}`}
       style={{ '--tile-index': index } as CSSProperties}
       aria-label={accessibleLabel}
     >
