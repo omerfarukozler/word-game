@@ -49,9 +49,17 @@ export function WaitingRoomPanel({
     room.status === RoomStatus.Playing
   ) {
     return (
-      <section className="status-panel status-panel--success" role="status">
+      <section
+        className="status-panel status-panel--success match-ready-panel"
+        role="status"
+      >
+        <div className="mini-loader" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
         <h2>Maç başladı</h2>
-        <p>İlk tahminini yapmak için oyun alanı açılıyor.</p>
+        <p>Oyun alanına hazırlanıyorsunuz.</p>
       </section>
     )
   }
@@ -72,12 +80,30 @@ export function WaitingRoomPanel({
         <h2 id="waiting-title">{getRoomStatusLabel(room.status)}</h2>
       </div>
 
-      {!isHost && <p>Oda sahibinin maçı başlatması bekleniyor.</p>}
-      {isHost && room.players.length < 2 && <p>İkinci oyuncu bekleniyor.</p>}
-      {isHost && hasAnyMatch && (
-        <p>Bu odada ilk maç oynandı. Yeni maç rematch akışıyla başlatılacak.</p>
+      {!isHost && (
+        <div className="status-callout">
+          <strong>Oda sahibinin maçı başlatması bekleniyor.</strong>
+          <span>Hazır olduğunda oyun alanına birlikte geçeceksiniz.</span>
+        </div>
       )}
-      {canStartFirstMatch && <p>İki oyuncu hazır. İlk maçı başlatabilirsin.</p>}
+      {isHost && room.players.length < 2 && (
+        <div className="status-callout status-callout--accent">
+          <strong>Rakibin bekleniyor.</strong>
+          <span>Oda kodunu arkadaşınla paylaş.</span>
+        </div>
+      )}
+      {isHost && hasAnyMatch && (
+        <div className="status-callout">
+          <strong>İlk maç oynandı.</strong>
+          <span>Yeni maç rematch akışıyla başlatılacak.</span>
+        </div>
+      )}
+      {canStartFirstMatch && (
+        <div className="status-callout status-callout--success">
+          <strong>Her şey hazır.</strong>
+          <span>Maçı başlatabilirsin.</span>
+        </div>
+      )}
 
       <InlineError id="start-match-error" message={startError} />
 

@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { RoomStatus, type Room } from '../types/domain'
+import { MatchStatus, RoomStatus, type Room } from '../types/domain'
 import {
   PLAYER_SESSION_STORAGE_KEY,
   type PlayerSession,
@@ -112,9 +112,13 @@ describe('RoomPage', () => {
 
     renderRoomPage()
 
+    expect(await screen.findByRole('heading', { name: 'ABC123' })).toBeInTheDocument()
     expect(
       await screen.findByRole('heading', { name: 'İkinci oyuncu bekleniyor' }),
     ).toBeInTheDocument()
+    expect(screen.getByText('Ada')).toBeInTheDocument()
+    expect(screen.getByText('Sen')).toBeInTheDocument()
+    expect(screen.getByText('Host')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /maçı başlat/i })).not.toBeInTheDocument()
   })
 
@@ -222,6 +226,33 @@ describe('RoomPage', () => {
 
     expect(await screen.findByText(/tekrar oynama seçenekleri/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /maçı başlat/i })).not.toBeInTheDocument()
+  })
+
+  it('renders the match started placeholder without guess controls', async () => {
+    writeSession()
+    vi.mocked(getRoom).mockResolvedValue(
+      createRoomSnapshot({
+        status: RoomStatus.Playing,
+        matches: [
+          {
+            id: 'match-1',
+            roomId: 'room-1',
+            status: MatchStatus.Playing,
+            winnerPlayerId: null,
+            startedAt: '2026-07-29T18:00:00Z',
+            completedAt: null,
+          },
+        ],
+      }),
+    )
+
+    renderRoomPage()
+
+    expect(
+      await screen.findByRole('heading', { name: /maç başladı/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/oyun alanına hazırlanıyorsunuz/i)).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /tahmin/i })).not.toBeInTheDocument()
   })
 
   it('sends player token in the start body and blocks duplicate start clicks', async () => {

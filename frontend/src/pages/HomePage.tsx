@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { HeroLetterTiles } from '../components/HeroLetterTiles'
 import { CreateRoomForm } from '../features/room/components/CreateRoomForm'
 import { JoinRoomForm } from '../features/room/components/JoinRoomForm'
 import {
@@ -104,14 +105,31 @@ export function HomePage() {
   }
 
   return (
-    <main className="page-shell page-shell--split" aria-labelledby="home-title">
-      <p className="eyebrow">Word Battle</p>
-      <h1 id="home-title">Odanı kur, savaşı başlat</h1>
-      <p className="lede">
-        Beş harfli kelime düellosu için bir oda oluştur ya da arkadaşının koduyla katıl.
-      </p>
+    <main className="page-shell page-shell--split home-page" aria-labelledby="home-title">
+      <section className="home-hero" aria-labelledby="home-title">
+        <p className="brand-mark">Word Battle</p>
+        <HeroLetterTiles />
+        <p className="eyebrow">Canlı kelime düellosu</p>
+        <h1 id="home-title">
+          Odanı kur, <span>kelime savaşını başlat.</span>
+        </h1>
+        <p className="lede">
+          Beş harfli kelime düellosu için bir oda oluştur ya da arkadaşının koduyla katıl.
+        </p>
+        <ul className="hero-points" aria-label="Oyun özellikleri">
+          <li>İki oyuncu</li>
+          <li>Canlı oda</li>
+          <li>Tek kodla katılım</li>
+        </ul>
+      </section>
 
       <form className="room-entry" aria-label="Oda giriş formu" onSubmit={handleSubmit}>
+        <div className="room-entry__header">
+          <p className="eyebrow">Başla</p>
+          <h2>Oyun odası</h2>
+          <p>Nickname seç, yeni oda aç veya paylaşılan kodla bekleme odasına gir.</p>
+        </div>
+
         <div className="field-group">
           <label className="field-label" htmlFor="nickname">
             Nickname
@@ -125,6 +143,7 @@ export function HomePage() {
               setNicknameError(null)
             }}
             autoComplete="nickname"
+            aria-invalid={nicknameError ? true : undefined}
             aria-describedby={nicknameError ? 'nickname-error' : undefined}
           />
           {nicknameError && (
@@ -147,7 +166,7 @@ export function HomePage() {
         />
 
         <div className="section-divider" role="separator">
-          veya
+          <span>veya</span>
         </div>
 
         <JoinRoomForm

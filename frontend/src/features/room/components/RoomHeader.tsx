@@ -24,22 +24,25 @@ export function RoomHeader({ room }: RoomHeaderProps) {
 
   return (
     <header className="room-header">
-      <div>
+      <div className="room-header__content">
         <p className="eyebrow">Oda kodu</p>
         <h1 className="room-code">{room.code}</h1>
+        <p className="room-header__hint">Bu kodu arkadaşınla paylaş.</p>
       </div>
-      <button
-        type="button"
-        className="button button--secondary"
-        aria-label={`Oda kodunu kopyala: ${room.code}`}
-        onClick={handleCopyRoomCode}
-      >
-        Kopyala
-      </button>
-      <p className="copy-status" role="status" aria-live="polite">
-        {copyMessage}
-      </p>
-      <InlineError message={copyError} />
+      <div className="room-header__actions">
+        <button
+          type="button"
+          className="button button--ghost"
+          aria-label={`Oda kodunu kopyala: ${room.code}`}
+          onClick={handleCopyRoomCode}
+        >
+          Kopyala
+        </button>
+        <p className="copy-status" role="status" aria-live="polite">
+          {copyMessage}
+        </p>
+        <InlineError message={copyError} />
+      </div>
     </header>
   )
 }

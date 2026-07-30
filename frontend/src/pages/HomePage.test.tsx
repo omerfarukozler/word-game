@@ -36,11 +36,18 @@ describe('HomePage', () => {
   })
 
   it('renders the shared nickname input', () => {
-    renderHomePage()
+    const { container } = renderHomePage()
 
+    expect(
+      screen.getByRole('heading', { name: /odanı kur, kelime savaşını başlat/i }),
+    ).toBeInTheDocument()
     expect(screen.getByLabelText(/nickname/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /oda oluştur/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /odaya katıl/i })).toBeInTheDocument()
+    expect(container.querySelector('.hero-letter-tiles')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
   })
 
   it('creates a room, stores host session, and navigates to the room', async () => {

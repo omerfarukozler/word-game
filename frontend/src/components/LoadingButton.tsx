@@ -15,6 +15,7 @@ export function LoadingButton({
 }: LoadingButtonProps) {
   return (
     <button {...buttonProps} disabled={disabled || isLoading} aria-busy={isLoading}>
+      {isLoading && <span className="button__spinner" aria-hidden="true" />}
       {isLoading ? loadingLabel : children}
     </button>
   )

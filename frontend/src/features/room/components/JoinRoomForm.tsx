@@ -34,6 +34,7 @@ export function JoinRoomForm({
         spellCheck={false}
         autoCapitalize="characters"
         inputMode="text"
+        aria-invalid={error ? true : undefined}
         aria-describedby={error ? 'join-room-error' : undefined}
       />
       <InlineError id="join-room-error" message={error} />
