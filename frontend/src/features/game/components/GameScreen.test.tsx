@@ -103,8 +103,18 @@ function renderGameScreen(overrides: Partial<ComponentProps<typeof GameScreen>> 
       guesses={guesses}
       matchResult={null}
       connectionLabel="bağlı"
+      rematchState={{
+        status: 'idle',
+        requestedByPlayerId: null,
+        requestedAt: null,
+        rejectedAt: null,
+        message: null,
+        error: null,
+      }}
       onGuessSubmitted={vi.fn()}
       onMatchCompleted={vi.fn()}
+      onRequestRematch={vi.fn()}
+      onRespondRematch={vi.fn()}
       {...overrides}
     />,
   )
@@ -139,7 +149,7 @@ describe('GameScreen', () => {
     expect(within(legend).getByText(/kelimede yok/i)).toBeInTheDocument()
   })
 
-  it('shows winner result without rematch controls', () => {
+  it('shows winner result with rematch controls', () => {
     renderGameScreen({
       match: {
         ...match,
@@ -162,8 +172,36 @@ describe('GameScreen', () => {
     expect(within(result).getByText(/rakip tahmini/i)).toBeInTheDocument()
     expect(within(result).getByText(/oda kodu/i)).toBeInTheDocument()
     expect(within(result).getByText('ABC123')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tekrar oyna/i })).toBeInTheDocument()
+  })
+
+  it('shows incoming rematch modal without hiding the result panel', () => {
+    renderGameScreen({
+      match: {
+        ...match,
+        status: MatchStatus.Completed,
+        winnerPlayerId: 'player-1',
+        completedAt: '2026-07-30T12:03:00Z',
+      },
+      matchResult: {
+        matchId: 'match-1',
+        winnerPlayerId: 'player-1',
+        completedAt: '2026-07-30T12:03:00Z',
+      },
+      rematchState: {
+        status: 'incoming',
+        requestedByPlayerId: 'player-2',
+        requestedAt: '2026-07-30T12:04:00Z',
+        rejectedAt: null,
+        message: 'Rakibin tekrar oynamak istiyor.',
+        error: null,
+      },
+    })
+
     expect(
-      screen.queryByRole('button', { name: /rematch|tekrar/i }),
-    ).not.toBeInTheDocument()
+      screen.getByRole('dialog', { name: /rakibin tekrar oynamak istiyor/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /kabul et/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /reddet/i })).toBeInTheDocument()
   })
 })

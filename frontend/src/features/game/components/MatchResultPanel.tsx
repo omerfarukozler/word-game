@@ -1,4 +1,5 @@
 import type { Room } from '../../../types/domain'
+import type { RematchState } from '../../room/hooks/useRoomSession'
 import type { MatchResult } from '../types'
 
 interface MatchResultPanelProps {
@@ -7,6 +8,8 @@ interface MatchResultPanelProps {
   currentPlayerId: string
   ownGuessCount: number
   opponentGuessCount: number
+  rematchState: RematchState
+  onRequestRematch: () => void
 }
 
 export function MatchResultPanel({
@@ -15,9 +18,19 @@ export function MatchResultPanel({
   currentPlayerId,
   ownGuessCount,
   opponentGuessCount,
+  rematchState,
+  onRequestRematch,
 }: MatchResultPanelProps) {
   const winner = room.players.find((player) => player.id === result.winnerPlayerId)
   const didCurrentPlayerWin = result.winnerPlayerId === currentPlayerId
+  const isRequestDisabled =
+    rematchState.status === 'requesting' ||
+    rematchState.status === 'waiting' ||
+    rematchState.status === 'incoming' ||
+    rematchState.status === 'responding' ||
+    rematchState.status === 'starting'
+  const rematchButtonLabel =
+    rematchState.status === 'requesting' ? 'İstek gönderiliyor...' : 'Tekrar Oyna'
 
   return (
     <section className="game-panel match-result-panel" role="status" aria-live="polite">
@@ -53,7 +66,30 @@ export function MatchResultPanel({
         </div>
       </dl>
       <div className="match-result-panel__actions">
-        <p>Aynı odada yeni bir karşılaşma başlatabileceksiniz.</p>
+        <div>
+          <p>Aynı odada yeni bir karşılaşma başlat.</p>
+          {(rematchState.message || rematchState.error) && (
+            <p
+              className={
+                rematchState.error
+                  ? 'match-result-panel__feedback match-result-panel__feedback--error'
+                  : 'match-result-panel__feedback'
+              }
+              role="status"
+              aria-live="polite"
+            >
+              {rematchState.error ?? rematchState.message}
+            </p>
+          )}
+        </div>
+        <button
+          className="button button--primary"
+          type="button"
+          disabled={isRequestDisabled}
+          onClick={onRequestRematch}
+        >
+          {rematchButtonLabel}
+        </button>
       </div>
     </section>
   )

@@ -3,10 +3,17 @@ import type { SubmitGuessResponse } from '../../../types/api'
 import type {
   GuessSubmittedNotification,
   MatchCompletedNotification,
+  RematchRejectedNotification,
+  RematchRequestedNotification,
 } from '../../../types/realtime'
 import type { GameGuess, MatchResult } from '../../game/types'
 import { createGameHubClient } from '../../../services/gameHub'
-import { getRoom, startMatch } from '../../../services/roomApi'
+import {
+  getRoom,
+  requestRematch,
+  respondRematch,
+  startMatch,
+} from '../../../services/roomApi'
 import { MatchStatus, RoomStatus, type Match, type Room } from '../../../types/domain'
 import type { PlayerSession } from '../../../session/playerSessionStorage'
 import { upsertById } from '../../../utils/dedupe'
@@ -15,6 +22,33 @@ import { normalizeRoomCode } from '../../../utils/roomCode'
 import { selectCurrentMatch } from '../utils/selectCurrentMatch'
 
 type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error'
+type RematchStatus =
+  | 'idle'
+  | 'requesting'
+  | 'waiting'
+  | 'incoming'
+  | 'responding'
+  | 'starting'
+  | 'rejected'
+  | 'error'
+
+export interface RematchState {
+  status: RematchStatus
+  requestedByPlayerId: string | null
+  requestedAt: string | null
+  rejectedAt: string | null
+  message: string | null
+  error: string | null
+}
+
+const idleRematchState: RematchState = {
+  status: 'idle',
+  requestedByPlayerId: null,
+  requestedAt: null,
+  rejectedAt: null,
+  message: null,
+  error: null,
+}
 
 interface LoadRoomOptions {
   signal?: AbortSignal
@@ -32,6 +66,7 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
   const [isStartingMatch, setIsStartingMatch] = useState(false)
   const [submittedGuesses, setSubmittedGuesses] = useState<GameGuess[]>([])
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
+  const [rematchState, setRematchState] = useState<RematchState>(idleRematchState)
   const loadSequenceRef = useRef(0)
 
   const applyRoomSnapshot = useCallback((nextRoom: Room) => {
@@ -151,7 +186,58 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
       previousGuesses.filter((guess) => guess.matchId === match.id),
     )
     setMatchResult(null)
+    setRematchState(idleRematchState)
   }, [])
+
+  const recordRematchRequested = useCallback(
+    (notification: RematchRequestedNotification) => {
+      setRematchState((previousState) => {
+        if (
+          previousState.requestedByPlayerId === notification.requestedByPlayerId &&
+          previousState.requestedAt === notification.requestedAt &&
+          previousState.status !== 'requesting'
+        ) {
+          return previousState
+        }
+
+        const isOwnRequest = notification.requestedByPlayerId === playerSession.playerId
+
+        return {
+          status: isOwnRequest ? 'waiting' : 'incoming',
+          requestedByPlayerId: notification.requestedByPlayerId,
+          requestedAt: notification.requestedAt,
+          rejectedAt: null,
+          message: isOwnRequest
+            ? 'Rakibin cevabı bekleniyor...'
+            : 'Rakibin tekrar oynamak istiyor.',
+          error: null,
+        }
+      })
+    },
+    [playerSession.playerId],
+  )
+
+  const recordRematchRejected = useCallback(
+    (notification: RematchRejectedNotification) => {
+      setRematchState((previousState) => {
+        if (previousState.rejectedAt === notification.rejectedAt) {
+          return previousState
+        }
+
+        const isOwnRequest = notification.requestedByPlayerId === playerSession.playerId
+
+        return {
+          status: isOwnRequest ? 'rejected' : 'idle',
+          requestedByPlayerId: null,
+          requestedAt: null,
+          rejectedAt: notification.rejectedAt,
+          message: isOwnRequest ? 'Rakibin isteği reddetti.' : null,
+          error: null,
+        }
+      })
+    },
+    [playerSession.playerId],
+  )
 
   const loadRoom = useCallback(
     async ({ signal, silent = false }: LoadRoomOptions = {}) => {
@@ -212,6 +298,12 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
       matchCompleted: (notification) => {
         recordMatchCompleted(notification)
       },
+      rematchRequested: (notification) => {
+        recordRematchRequested(notification)
+      },
+      rematchRejected: (notification) => {
+        recordRematchRejected(notification)
+      },
     })
 
     const unregisterReconnectHandler = hubClient.onReconnected(() => {
@@ -257,6 +349,8 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
     loadRoom,
     normalizedRoomCode,
     recordMatchCompleted,
+    recordRematchRejected,
+    recordRematchRequested,
     recordSubmittedGuess,
   ])
 
@@ -280,6 +374,111 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
     }
   }, [applyMatchStarted, isStartingMatch, normalizedRoomCode, playerSession.playerToken])
 
+  const handleRequestRematch = useCallback(async () => {
+    if (rematchState.status === 'requesting' || rematchState.status === 'waiting') {
+      return
+    }
+
+    setRematchState({
+      status: 'requesting',
+      requestedByPlayerId: playerSession.playerId,
+      requestedAt: null,
+      rejectedAt: null,
+      message: 'İstek gönderiliyor...',
+      error: null,
+    })
+
+    try {
+      const response = await requestRematch(normalizedRoomCode, {
+        playerToken: playerSession.playerToken,
+      })
+
+      recordRematchRequested(response)
+    } catch (error) {
+      setRematchState({
+        status: 'error',
+        requestedByPlayerId: null,
+        requestedAt: null,
+        rejectedAt: null,
+        message: null,
+        error: toFriendlyErrorMessage(error),
+      })
+    }
+  }, [
+    normalizedRoomCode,
+    playerSession.playerId,
+    playerSession.playerToken,
+    recordRematchRequested,
+    rematchState.status,
+  ])
+
+  const handleRespondRematch = useCallback(
+    async (accept: boolean) => {
+      if (
+        rematchState.status === 'responding' ||
+        rematchState.status === 'starting' ||
+        rematchState.requestedByPlayerId === playerSession.playerId
+      ) {
+        return
+      }
+
+      const requestedByPlayerId = rematchState.requestedByPlayerId
+
+      setRematchState((previousState) => ({
+        ...previousState,
+        status: accept ? 'starting' : 'responding',
+        message: accept ? 'Yeni maç hazırlanıyor...' : 'Cevap gönderiliyor...',
+        error: null,
+      }))
+
+      try {
+        const response = await respondRematch(normalizedRoomCode, {
+          playerToken: playerSession.playerToken,
+          accept,
+        })
+
+        if (!response.accepted) {
+          recordRematchRejected({
+            requestedByPlayerId: requestedByPlayerId ?? '',
+            rejectedByPlayerId: playerSession.playerId,
+            rejectedAt: new Date().toISOString(),
+          })
+          return
+        }
+
+        if (response.match) {
+          applyMatchStarted(response.match)
+          return
+        }
+
+        if (response.accepted) {
+          setRematchState((previousState) => ({
+            ...previousState,
+            status: 'starting',
+            message: 'Yeni maç hazırlanıyor...',
+            error: null,
+          }))
+        }
+      } catch (error) {
+        setRematchState((previousState) => ({
+          ...previousState,
+          status: 'incoming',
+          message: 'Rakibin tekrar oynamak istiyor.',
+          error: toFriendlyErrorMessage(error),
+        }))
+      }
+    },
+    [
+      applyMatchStarted,
+      normalizedRoomCode,
+      playerSession.playerId,
+      playerSession.playerToken,
+      recordRematchRejected,
+      rematchState.requestedByPlayerId,
+      rematchState.status,
+    ],
+  )
+
   return {
     room,
     currentMatch,
@@ -290,8 +489,11 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
     startError,
     submittedGuesses,
     matchResult,
+    rematchState,
     loadRoom,
     startMatch: handleStartMatch,
+    requestRematch: handleRequestRematch,
+    respondRematch: handleRespondRematch,
     recordSubmittedGuess,
     recordMatchCompleted,
   }

@@ -21,7 +21,18 @@ const friendlyDetailByBackendMessage = new Map<string, string>([
   ['A match is already in progress.', 'Bu odada maç zaten başlamış.'],
   [
     'A new match must be started through the rematch flow.',
-    'Bu odada ilk maç tamamlandı. Tekrar oynama akışı sonraki fazda eklenecek.',
+    'Bu odada ilk maç tamamlandı. Yeni maç için Tekrar Oyna akışını kullanın.',
+  ],
+  ['A rematch request is already pending.', 'Tekrar maç isteği zaten beklemede.'],
+  ['There is no pending rematch request.', 'Bekleyen tekrar maç isteği bulunamadı.'],
+  [
+    'A player cannot respond to their own rematch request.',
+    'Kendi tekrar maç isteğine cevap veremezsin.',
+  ],
+  ['The room is not ready for rematch.', 'Bu oda tekrar maç için hazır değil.'],
+  [
+    'Exactly two players are required for rematch.',
+    'Tekrar maç için odada iki oyuncu olmalı.',
   ],
   ['Player token is required.', 'Oyuncu oturumu geçersiz. Odaya yeniden katılın.'],
   ['Guess word is required.', 'Tahmin kelimesi boş olamaz.'],

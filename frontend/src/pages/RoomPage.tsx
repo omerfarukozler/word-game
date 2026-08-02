@@ -62,7 +62,10 @@ function RoomPageContent({ roomCode }: { roomCode: string }) {
     startError,
     submittedGuesses,
     matchResult,
+    rematchState,
     startMatch,
+    requestRematch,
+    respondRematch,
     recordSubmittedGuess,
     recordMatchCompleted,
   } = useRoomSession(roomCode, session!)
@@ -103,8 +106,11 @@ function RoomPageContent({ roomCode }: { roomCode: string }) {
               guesses={submittedGuesses}
               matchResult={matchResult}
               connectionLabel={connectionLabel}
+              rematchState={rematchState}
               onGuessSubmitted={recordSubmittedGuess}
               onMatchCompleted={recordMatchCompleted}
+              onRequestRematch={requestRematch}
+              onRespondRematch={respondRematch}
             />
           ) : (
             <>

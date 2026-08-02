@@ -4,11 +4,13 @@ import type {
   GuessSubmittedNotification,
   MatchCompletedNotification,
 } from '../../../types/realtime'
+import type { RematchState } from '../../room/hooks/useRoomSession'
 import { InlineError } from '../../../components/InlineError'
 import { GameBoard } from './GameBoard'
 import { GameHeader } from './GameHeader'
 import { MatchResultPanel } from './MatchResultPanel'
 import { OpponentProgress } from './OpponentProgress'
+import { RematchDecisionModal } from './RematchDecisionModal'
 import { VirtualKeyboard } from './VirtualKeyboard'
 import type { GameGuess, MatchResult } from '../types'
 import { useGameSession } from '../hooks/useGameSession'
@@ -20,8 +22,11 @@ interface GameScreenProps {
   guesses: GameGuess[]
   matchResult: MatchResult | null
   connectionLabel: string
+  rematchState: RematchState
   onGuessSubmitted: (guess: GuessSubmittedNotification) => void
   onMatchCompleted: (notification: MatchCompletedNotification) => void
+  onRequestRematch: () => void
+  onRespondRematch: (accept: boolean) => void
 }
 
 export function GameScreen({
@@ -31,8 +36,11 @@ export function GameScreen({
   guesses,
   matchResult,
   connectionLabel,
+  rematchState,
   onGuessSubmitted,
   onMatchCompleted,
+  onRequestRematch,
+  onRespondRematch,
 }: GameScreenProps) {
   const gameSession = useGameSession({
     room,
@@ -46,6 +54,14 @@ export function GameScreen({
 
   const shouldShowConnectionWarning =
     connectionLabel === 'yeniden bağlanıyor' || connectionLabel === 'bağlantı kurulamadı'
+  const rematchRequester =
+    room.players.find((player) => player.id === rematchState.requestedByPlayerId) ?? null
+  const shouldShowRematchModal =
+    rematchState.requestedByPlayerId !== null &&
+    rematchState.requestedByPlayerId !== session.playerId &&
+    (rematchState.status === 'incoming' ||
+      rematchState.status === 'responding' ||
+      rematchState.status === 'starting')
 
   return (
     <>
@@ -134,6 +150,16 @@ export function GameScreen({
           currentPlayerId={session.playerId}
           ownGuessCount={gameSession.ownGuesses.length}
           opponentGuessCount={gameSession.opponentGuesses.length}
+          rematchState={rematchState}
+          onRequestRematch={onRequestRematch}
+        />
+      )}
+
+      {shouldShowRematchModal && (
+        <RematchDecisionModal
+          requester={rematchRequester}
+          rematchState={rematchState}
+          onRespond={onRespondRematch}
         />
       )}
     </>

@@ -1,6 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getRoom, startMatch } from '../../../services/roomApi'
+import {
+  getRoom,
+  requestRematch,
+  respondRematch,
+  startMatch,
+} from '../../../services/roomApi'
 import { createGameHubClient } from '../../../services/gameHub'
 import { MatchStatus, RoomStatus, type Match, type Room } from '../../../types/domain'
 import type { GameHubHandlers } from '../../../types/realtime'
@@ -9,6 +14,8 @@ import { useRoomSession } from './useRoomSession'
 
 vi.mock('../../../services/roomApi', () => ({
   getRoom: vi.fn(),
+  requestRematch: vi.fn(),
+  respondRematch: vi.fn(),
   startMatch: vi.fn(),
 }))
 
@@ -81,6 +88,15 @@ function playingMatch(overrides: Partial<Match> = {}): Match {
     completedAt: null,
     ...overrides,
   }
+}
+
+function completedMatch(overrides: Partial<Match> = {}): Match {
+  return playingMatch({
+    status: MatchStatus.Completed,
+    winnerPlayerId: 'host-1',
+    completedAt: '2026-07-29T18:07:00Z',
+    ...overrides,
+  })
 }
 
 describe('useRoomSession', () => {
@@ -274,6 +290,200 @@ describe('useRoomSession', () => {
 
     expect(startMatch).toHaveBeenCalledWith('ABC123', { playerToken: 'host-token' })
     expect(result.current.currentMatch?.id).toBe('match-1')
+  })
+
+  it('requests rematch with player token and waits for the opponent', async () => {
+    vi.mocked(getRoom).mockResolvedValue(
+      roomSnapshot({
+        status: RoomStatus.Ready,
+        matches: [completedMatch()],
+      }),
+    )
+    vi.mocked(requestRematch).mockResolvedValue({
+      requestedByPlayerId: 'host-1',
+      requestedAt: '2026-07-29T18:08:00Z',
+    })
+    const { result } = renderHook(() => useRoomSession('ABC123', session))
+
+    await waitFor(() => {
+      expect(result.current.matchResult?.matchId).toBe('match-1')
+    })
+
+    await act(async () => {
+      await result.current.requestRematch()
+    })
+
+    expect(requestRematch).toHaveBeenCalledWith('ABC123', {
+      playerToken: 'host-token',
+    })
+    expect(result.current.rematchState.status).toBe('waiting')
+    expect(result.current.rematchState.message).toBe('Rakibin cevabı bekleniyor...')
+  })
+
+  it('opens a single incoming rematch state for duplicate RematchRequested events', async () => {
+    vi.mocked(getRoom).mockResolvedValue(
+      roomSnapshot({
+        status: RoomStatus.Ready,
+        matches: [completedMatch()],
+      }),
+    )
+    const { result } = renderHook(() => useRoomSession('ABC123', session))
+
+    await waitFor(() => {
+      expect(result.current.matchResult?.matchId).toBe('match-1')
+    })
+
+    act(() => {
+      registeredHandlers.rematchRequested?.({
+        requestedByPlayerId: 'guest-1',
+        requestedAt: '2026-07-29T18:08:00Z',
+      })
+      registeredHandlers.rematchRequested?.({
+        requestedByPlayerId: 'guest-1',
+        requestedAt: '2026-07-29T18:08:00Z',
+      })
+    })
+
+    expect(result.current.rematchState.status).toBe('incoming')
+    expect(result.current.rematchState.requestedByPlayerId).toBe('guest-1')
+  })
+
+  it('responds to rematch accept and applies backend match without reconnecting', async () => {
+    vi.mocked(getRoom).mockResolvedValue(
+      roomSnapshot({
+        status: RoomStatus.Ready,
+        matches: [completedMatch()],
+      }),
+    )
+    vi.mocked(respondRematch).mockResolvedValue({
+      accepted: true,
+      match: playingMatch({ id: 'match-2', startedAt: '2026-07-29T18:09:00Z' }),
+    })
+    const { result } = renderHook(() => useRoomSession('ABC123', session))
+
+    await waitFor(() => {
+      expect(result.current.matchResult?.matchId).toBe('match-1')
+    })
+
+    act(() => {
+      registeredHandlers.rematchRequested?.({
+        requestedByPlayerId: 'guest-1',
+        requestedAt: '2026-07-29T18:08:00Z',
+      })
+      registeredHandlers.guessSubmitted?.({
+        id: 'guess-before-rematch',
+        matchId: 'match-1',
+        playerId: 'host-1',
+        word: 'ÇİĞDE',
+        attemptNumber: 1,
+        evaluation: [
+          { position: 0, letter: 'Ç', status: 2 },
+          { position: 1, letter: 'İ', status: 0 },
+          { position: 2, letter: 'Ğ', status: 1 },
+          { position: 3, letter: 'D', status: 0 },
+          { position: 4, letter: 'E', status: 0 },
+        ],
+        submittedAt: '2026-07-29T18:07:30Z',
+      })
+    })
+    expect(result.current.submittedGuesses).toHaveLength(1)
+
+    await act(async () => {
+      await result.current.respondRematch(true)
+    })
+
+    expect(respondRematch).toHaveBeenCalledWith('ABC123', {
+      playerToken: 'host-token',
+      accept: true,
+    })
+    expect(result.current.currentMatch?.id).toBe('match-2')
+    expect(result.current.matchResult).toBeNull()
+    expect(result.current.submittedGuesses).toEqual([])
+    expect(result.current.room?.id).toBe('room-1')
+    expect(hubSubscribeToRoom).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      registeredHandlers.matchStarted?.(
+        playingMatch({ id: 'match-2', startedAt: '2026-07-29T18:09:00Z' }),
+      )
+    })
+
+    expect(result.current.currentMatch?.id).toBe('match-2')
+    expect(result.current.matchResult).toBeNull()
+    expect(result.current.submittedGuesses).toEqual([])
+    expect(result.current.room?.id).toBe('room-1')
+    expect(result.current.rematchState.status).toBe('idle')
+  })
+
+  it('responds to rematch reject and keeps the completed match visible', async () => {
+    vi.mocked(getRoom).mockResolvedValue(
+      roomSnapshot({
+        status: RoomStatus.Ready,
+        matches: [completedMatch()],
+      }),
+    )
+    vi.mocked(respondRematch).mockResolvedValue({
+      accepted: false,
+      match: null,
+    })
+    const { result } = renderHook(() => useRoomSession('ABC123', session))
+
+    await waitFor(() => {
+      expect(result.current.matchResult?.matchId).toBe('match-1')
+    })
+
+    act(() => {
+      registeredHandlers.rematchRequested?.({
+        requestedByPlayerId: 'guest-1',
+        requestedAt: '2026-07-29T18:08:00Z',
+      })
+    })
+
+    await act(async () => {
+      await result.current.respondRematch(false)
+    })
+
+    expect(respondRematch).toHaveBeenCalledWith('ABC123', {
+      playerToken: 'host-token',
+      accept: false,
+    })
+    expect(result.current.currentMatch?.id).toBe('match-1')
+    expect(result.current.matchResult?.matchId).toBe('match-1')
+    expect(result.current.rematchState.status).toBe('idle')
+  })
+
+  it('handles duplicate RematchRejected events idempotently', async () => {
+    vi.mocked(getRoom).mockResolvedValue(
+      roomSnapshot({
+        status: RoomStatus.Ready,
+        matches: [completedMatch()],
+      }),
+    )
+    const { result } = renderHook(() => useRoomSession('ABC123', session))
+
+    await waitFor(() => {
+      expect(result.current.matchResult?.matchId).toBe('match-1')
+    })
+
+    act(() => {
+      registeredHandlers.rematchRequested?.({
+        requestedByPlayerId: 'host-1',
+        requestedAt: '2026-07-29T18:08:00Z',
+      })
+      registeredHandlers.rematchRejected?.({
+        requestedByPlayerId: 'host-1',
+        rejectedByPlayerId: 'guest-1',
+        rejectedAt: '2026-07-29T18:08:30Z',
+      })
+      registeredHandlers.rematchRejected?.({
+        requestedByPlayerId: 'host-1',
+        rejectedByPlayerId: 'guest-1',
+        rejectedAt: '2026-07-29T18:08:30Z',
+      })
+    })
+
+    expect(result.current.rematchState.status).toBe('rejected')
+    expect(result.current.rematchState.message).toBe('Rakibin isteği reddetti.')
   })
 
   it('removes handlers, unsubscribes, and stops the hub on cleanup', async () => {
