@@ -58,6 +58,7 @@ export interface SubmitGuessResponse {
   isCorrect: boolean
   isMatchCompleted: boolean
   winnerPlayerId: Guid | null
+  targetWord: string | null
   completionReason: MatchCompletionReason | null
   isDraw: boolean
   submittedAt: IsoDateTime

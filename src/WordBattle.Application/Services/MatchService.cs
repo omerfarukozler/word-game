@@ -198,6 +198,7 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
             IsCorrect = isCorrect,
             IsMatchCompleted = isMatchCompleted,
             WinnerPlayerId = isMatchCompleted ? match.WinnerPlayerId : null,
+            TargetWord = isMatchCompleted ? match.TargetWord : null,
             CompletionReason = completionReason,
             IsDraw = match.WinnerPlayerId is null &&
                 completionReason == MatchCompletionReason.TimeExpired,
@@ -276,6 +277,7 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
         {
             MatchId = match.Id,
             WinnerPlayerId = match.WinnerPlayerId,
+            TargetWord = match.TargetWord,
             CompletedAt = match.CompletedAt.Value,
             CompletionReason = match.CompletionReason.Value,
             IsDraw = match.WinnerPlayerId is null &&

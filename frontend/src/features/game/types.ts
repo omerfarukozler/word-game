@@ -19,6 +19,7 @@ export interface GameGuess {
 export interface MatchResult {
   matchId: Guid
   winnerPlayerId: Guid | null
+  targetWord: string | null
   completedAt: IsoDateTime
   completionReason: MatchCompletionReason
   isDraw: boolean

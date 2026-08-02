@@ -8,6 +8,8 @@ public sealed class MatchCompletedNotification
 
     public Guid? WinnerPlayerId { get; set; }
 
+    public string TargetWord { get; set; } = string.Empty;
+
     public DateTime CompletedAt { get; set; }
 
     public MatchCompletionReason CompletionReason { get; set; }

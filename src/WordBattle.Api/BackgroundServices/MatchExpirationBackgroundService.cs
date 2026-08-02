@@ -82,6 +82,7 @@ public sealed class MatchExpirationBackgroundService(
                     {
                         MatchId = match.Id,
                         WinnerPlayerId = null,
+                        TargetWord = match.TargetWord,
                         CompletedAt = match.CompletedAt!.Value,
                         CompletionReason = MatchCompletionReason.TimeExpired,
                         IsDraw = true

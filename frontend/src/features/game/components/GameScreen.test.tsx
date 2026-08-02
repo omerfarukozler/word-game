@@ -175,6 +175,7 @@ describe('GameScreen', () => {
       matchResult: {
         matchId: 'match-1',
         winnerPlayerId: 'player-2',
+        targetWord: 'BİLEK',
         completedAt: '2026-07-30T12:03:00Z',
         completionReason: MatchCompletionReason.CorrectGuess,
         isDraw: false,
@@ -188,6 +189,8 @@ describe('GameScreen', () => {
     expect(within(result).getByText(/senin tahminin/i)).toBeInTheDocument()
     expect(within(result).getByText(/rakip tahmini/i)).toBeInTheDocument()
     expect(within(result).getByText(/oda kodu/i)).toBeInTheDocument()
+    expect(within(result).getByText(/kelime/i)).toBeInTheDocument()
+    expect(within(result).getByText('BİLEK')).toBeInTheDocument()
     expect(within(result).getByText('ABC123')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /tekrar oyna/i })).toBeInTheDocument()
   })
@@ -204,6 +207,7 @@ describe('GameScreen', () => {
       matchResult: {
         matchId: 'match-1',
         winnerPlayerId: 'player-1',
+        targetWord: 'BİLEK',
         completedAt: '2026-07-30T12:03:00Z',
         completionReason: MatchCompletionReason.CorrectGuess,
         isDraw: false,

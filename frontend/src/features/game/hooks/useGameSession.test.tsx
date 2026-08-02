@@ -160,6 +160,7 @@ describe('useGameSession', () => {
       isCorrect: false,
       isMatchCompleted: false,
       winnerPlayerId: null,
+      targetWord: null,
       completionReason: null,
       isDraw: false,
       submittedAt: '2026-07-30T12:02:00Z',
@@ -228,6 +229,7 @@ describe('useGameSession', () => {
       matchResult: {
         matchId: 'match-1',
         winnerPlayerId: 'player-2',
+        targetWord: 'BİLEK',
         completedAt: '2026-07-30T12:03:00Z',
         completionReason: MatchCompletionReason.CorrectGuess,
         isDraw: false,

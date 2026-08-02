@@ -10,3 +10,4 @@ obj/
 TestResults/
 *.ncrunch*
 *.DotSettings.user
+.DS_Store

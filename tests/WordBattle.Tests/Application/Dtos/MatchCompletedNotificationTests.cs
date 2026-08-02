@@ -6,7 +6,6 @@ namespace WordBattle.Tests.Application.Dtos;
 public sealed class MatchCompletedNotificationTests
 {
     [Theory]
-    [InlineData("TargetWord")]
     [InlineData("PlayerToken")]
     [InlineData("Room")]
     [InlineData("Match")]
@@ -25,12 +24,14 @@ public sealed class MatchCompletedNotificationTests
         {
             MatchId = Guid.NewGuid(),
             WinnerPlayerId = null,
+            TargetWord = "İNCİR",
             CompletedAt = DateTime.UtcNow,
             CompletionReason = MatchCompletionReason.TimeExpired,
             IsDraw = true
         };
 
         Assert.Null(notification.WinnerPlayerId);
+        Assert.Equal("İNCİR", notification.TargetWord);
         Assert.Equal(MatchCompletionReason.TimeExpired, notification.CompletionReason);
         Assert.True(notification.IsDraw);
     }

@@ -79,6 +79,12 @@ export function MatchResultPanel({
           <dd>{room.code}</dd>
         </div>
       </dl>
+      {result.targetWord && (
+        <div className="match-result-panel__word" aria-label="Bu turun kelimesi">
+          <span>Kelime</span>
+          <strong>{result.targetWord}</strong>
+        </div>
+      )}
       <div className="match-result-panel__actions">
         <div>
           <p>Aynı odada yeni bir karşılaşma başlat.</p>

@@ -24,6 +24,8 @@ public sealed class SubmitGuessResponse
 
     public Guid? WinnerPlayerId { get; set; }
 
+    public string? TargetWord { get; set; }
+
     public MatchCompletionReason? CompletionReason { get; set; }
 
     public bool IsDraw { get; set; }

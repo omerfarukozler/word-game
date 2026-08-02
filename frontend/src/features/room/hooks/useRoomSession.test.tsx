@@ -246,6 +246,7 @@ describe('useRoomSession', () => {
       registeredHandlers.matchCompleted?.({
         matchId: 'match-1',
         winnerPlayerId: 'host-1',
+        targetWord: 'İNCİR',
         completedAt: '2026-07-29T18:07:00Z',
         completionReason: MatchCompletionReason.CorrectGuess,
         isDraw: false,
@@ -253,6 +254,7 @@ describe('useRoomSession', () => {
       registeredHandlers.matchCompleted?.({
         matchId: 'match-1',
         winnerPlayerId: 'host-1',
+        targetWord: 'İNCİR',
         completedAt: '2026-07-29T18:07:00Z',
         completionReason: MatchCompletionReason.CorrectGuess,
         isDraw: false,
@@ -263,6 +265,7 @@ describe('useRoomSession', () => {
     expect(result.current.matchResult).toEqual({
       matchId: 'match-1',
       winnerPlayerId: 'host-1',
+      targetWord: 'İNCİR',
       completedAt: '2026-07-29T18:07:00Z',
       completionReason: MatchCompletionReason.CorrectGuess,
       isDraw: false,

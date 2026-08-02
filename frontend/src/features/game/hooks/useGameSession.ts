@@ -200,6 +200,7 @@ export function useGameSession({
         onMatchCompleted({
           matchId: response.matchId,
           winnerPlayerId: response.winnerPlayerId,
+          targetWord: response.targetWord,
           completedAt: response.submittedAt,
           completionReason: response.completionReason,
           isDraw: response.isDraw,

@@ -6,7 +6,6 @@ namespace WordBattle.Tests.Application.Dtos;
 public sealed class SubmitGuessResponseTests
 {
     [Theory]
-    [InlineData("TargetWord")]
     [InlineData("PlayerToken")]
     [InlineData("Room")]
     [InlineData("Match")]
@@ -26,12 +25,14 @@ public sealed class SubmitGuessResponseTests
             CompletionReason = MatchCompletionReason.AttemptLimit,
             IsDraw = false,
             IsMatchCompleted = true,
+            TargetWord = "İNCİR",
             WinnerPlayerId = Guid.NewGuid()
         };
 
         Assert.Equal(MatchCompletionReason.AttemptLimit, response.CompletionReason);
         Assert.False(response.IsDraw);
         Assert.True(response.IsMatchCompleted);
+        Assert.Equal("İNCİR", response.TargetWord);
         Assert.NotNull(response.WinnerPlayerId);
     }
 }

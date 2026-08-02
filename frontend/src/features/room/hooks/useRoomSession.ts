@@ -89,6 +89,7 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
         ? {
             matchId: nextCurrentMatch.id,
             winnerPlayerId: nextCurrentMatch.winnerPlayerId,
+            targetWord: null,
             completedAt: nextCurrentMatch.completedAt,
             completionReason: snapshotCompletionReason,
             isDraw:

@@ -23,6 +23,7 @@ export interface GuessSubmittedNotification {
 export interface MatchCompletedNotification {
   matchId: Guid
   winnerPlayerId: Guid | null
+  targetWord: string | null
   completedAt: IsoDateTime
   completionReason: MatchCompletionReason
   isDraw: boolean
