@@ -22,14 +22,15 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("DevelopmentCors", policy =>
+    options.AddPolicy("AppCors", policy =>
     {
         policy
             .WithOrigins(
                 "http://localhost:5500",
                 "http://127.0.0.1:5500",
                 "http://localhost:5173",
-                "http://127.0.0.1:5173")
+                "http://127.0.0.1:5173",
+                "https://wordbattle-rosy.vercel.app")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -45,7 +46,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseCors("DevelopmentCors");
+
+app.UseCors("AppCors");
 
 app.UseAuthorization();
 
