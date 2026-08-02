@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RoomStatus, type Room } from '../../../types/domain'
 import { RoomHeader } from './RoomHeader'
@@ -15,14 +15,20 @@ const room: Room = {
 
 describe('RoomHeader', () => {
   let writeText: ReturnType<typeof vi.fn>
+  let execCommand: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     writeText = vi.fn()
+    execCommand = vi.fn()
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
         writeText,
       },
+    })
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: execCommand,
     })
   })
 
@@ -38,10 +44,24 @@ describe('RoomHeader', () => {
 
   it('shows a safe error when clipboard copy fails', async () => {
     writeText.mockRejectedValue(new Error('denied'))
+    execCommand.mockReturnValue(false)
     render(<RoomHeader room={room} />)
 
     fireEvent.click(screen.getByRole('button', { name: /oda kodunu kopyala/i }))
 
     expect(await screen.findByText(/kod kopyalanamadı/i)).toBeInTheDocument()
+  })
+
+  it('falls back to textarea copy when Clipboard API fails', async () => {
+    writeText.mockRejectedValue(new Error('insecure origin'))
+    execCommand.mockReturnValue(true)
+    render(<RoomHeader room={room} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /oda kodunu kopyala/i }))
+
+    await waitFor(() => {
+      expect(execCommand).toHaveBeenCalledWith('copy')
+    })
+    expect(await screen.findByText(/kod kopyalandı/i)).toBeInTheDocument()
   })
 })
