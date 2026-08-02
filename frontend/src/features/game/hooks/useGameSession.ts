@@ -31,6 +31,14 @@ function isTypingInFormElement(target: EventTarget | null) {
   return Boolean(target.closest('input, textarea, select, [contenteditable="true"]'))
 }
 
+function getRemainingMilliseconds(expiresAt: string | null) {
+  if (!expiresAt) {
+    return null
+  }
+
+  return Math.max(0, new Date(expiresAt).getTime() - Date.now())
+}
+
 export function useGameSession({
   room,
   match,
@@ -44,11 +52,16 @@ export function useGameSession({
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitMessage, setSubmitMessage] = useState<string | null>(null)
   const [isSubmittingGuess, setIsSubmittingGuess] = useState(false)
+  const [remainingMilliseconds, setRemainingMilliseconds] = useState<number | null>(() =>
+    getRemainingMilliseconds(match.expiresAt),
+  )
   const [shakeToken, setShakeToken] = useState(0)
   const previousMatchIdRef = useRef(match.id)
   const isSubmittingGuessRef = useRef(false)
 
   const isCompleted = match.status === MatchStatus.Completed || matchResult !== null
+  const isTimeExpired =
+    !isCompleted && remainingMilliseconds !== null && remainingMilliseconds <= 0
 
   useEffect(() => {
     if (previousMatchIdRef.current === match.id) {
@@ -63,6 +76,19 @@ export function useGameSession({
     isSubmittingGuessRef.current = false
     setShakeToken(0)
   }, [match.id])
+
+  useEffect(() => {
+    function updateRemainingMilliseconds() {
+      setRemainingMilliseconds(getRemainingMilliseconds(match.expiresAt))
+    }
+
+    updateRemainingMilliseconds()
+    const intervalId = window.setInterval(updateRemainingMilliseconds, 1000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [match.expiresAt])
 
   const { ownGuesses, opponentGuesses } = useMemo(
     () =>
@@ -79,7 +105,12 @@ export function useGameSession({
 
   const appendLetter = useCallback(
     (letter: string) => {
-      if (!hasRemainingGuesses || isCompleted || isSubmittingGuessRef.current) {
+      if (
+        !hasRemainingGuesses ||
+        isCompleted ||
+        isTimeExpired ||
+        isSubmittingGuessRef.current
+      ) {
         return
       }
 
@@ -99,17 +130,17 @@ export function useGameSession({
         return `${previousGuess}${normalizedLetter}`
       })
     },
-    [hasRemainingGuesses, isCompleted],
+    [hasRemainingGuesses, isCompleted, isTimeExpired],
   )
 
   const removeLetter = useCallback(() => {
-    if (isCompleted || isSubmittingGuessRef.current) {
+    if (isCompleted || isTimeExpired || isSubmittingGuessRef.current) {
       return
     }
 
     setSubmitError(null)
     setCurrentGuess((previousGuess) => previousGuess.slice(0, -1))
-  }, [isCompleted])
+  }, [isCompleted, isTimeExpired])
 
   const triggerInvalidGuess = useCallback((message: string) => {
     setSubmitError(message)
@@ -118,6 +149,11 @@ export function useGameSession({
 
   const submitCurrentGuess = useCallback(async () => {
     if (isCompleted || isSubmittingGuessRef.current) {
+      return
+    }
+
+    if (isTimeExpired) {
+      triggerInvalidGuess('Süre doldu, sonuç bekleniyor...')
       return
     }
 
@@ -156,11 +192,17 @@ export function useGameSession({
       setCurrentGuess('')
       setSubmitMessage(response.isCorrect ? 'Doğru tahmin!' : 'Tahmin gönderildi.')
 
-      if (response.isMatchCompleted && response.winnerPlayerId && response.submittedAt) {
+      if (
+        response.isMatchCompleted &&
+        response.completionReason !== null &&
+        response.submittedAt
+      ) {
         onMatchCompleted({
           matchId: response.matchId,
           winnerPlayerId: response.winnerPlayerId,
           completedAt: response.submittedAt,
+          completionReason: response.completionReason,
+          isDraw: response.isDraw,
         })
       }
     } catch (error) {
@@ -173,6 +215,7 @@ export function useGameSession({
     currentGuess,
     hasRemainingGuesses,
     isCompleted,
+    isTimeExpired,
     match.id,
     onGuessSubmitted,
     onMatchCompleted,
@@ -228,6 +271,8 @@ export function useGameSession({
     keyboardState,
     hasRemainingGuesses,
     isCompleted,
+    isTimeExpired,
+    remainingMilliseconds,
     isSubmittingGuess,
     submitError,
     submitMessage,

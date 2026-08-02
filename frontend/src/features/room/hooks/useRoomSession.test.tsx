@@ -7,7 +7,13 @@ import {
   startMatch,
 } from '../../../services/roomApi'
 import { createGameHubClient } from '../../../services/gameHub'
-import { MatchStatus, RoomStatus, type Match, type Room } from '../../../types/domain'
+import {
+  MatchCompletionReason,
+  MatchStatus,
+  RoomStatus,
+  type Match,
+  type Room,
+} from '../../../types/domain'
 import type { GameHubHandlers } from '../../../types/realtime'
 import type { PlayerSession } from '../../../session/playerSessionStorage'
 import { useRoomSession } from './useRoomSession'
@@ -85,7 +91,9 @@ function playingMatch(overrides: Partial<Match> = {}): Match {
     status: MatchStatus.Playing,
     winnerPlayerId: null,
     startedAt: '2026-07-29T18:05:00Z',
+    expiresAt: '2026-07-29T18:07:00Z',
     completedAt: null,
+    completionReason: null,
     ...overrides,
   }
 }
@@ -95,6 +103,7 @@ function completedMatch(overrides: Partial<Match> = {}): Match {
     status: MatchStatus.Completed,
     winnerPlayerId: 'host-1',
     completedAt: '2026-07-29T18:07:00Z',
+    completionReason: MatchCompletionReason.CorrectGuess,
     ...overrides,
   })
 }
@@ -238,11 +247,15 @@ describe('useRoomSession', () => {
         matchId: 'match-1',
         winnerPlayerId: 'host-1',
         completedAt: '2026-07-29T18:07:00Z',
+        completionReason: MatchCompletionReason.CorrectGuess,
+        isDraw: false,
       })
       registeredHandlers.matchCompleted?.({
         matchId: 'match-1',
         winnerPlayerId: 'host-1',
         completedAt: '2026-07-29T18:07:00Z',
+        completionReason: MatchCompletionReason.CorrectGuess,
+        isDraw: false,
       })
     })
 
@@ -251,6 +264,8 @@ describe('useRoomSession', () => {
       matchId: 'match-1',
       winnerPlayerId: 'host-1',
       completedAt: '2026-07-29T18:07:00Z',
+      completionReason: MatchCompletionReason.CorrectGuess,
+      isDraw: false,
     })
   })
 

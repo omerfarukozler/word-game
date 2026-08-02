@@ -23,8 +23,14 @@ public sealed class GameMatchConfiguration : IEntityTypeConfiguration<GameMatch>
         builder.Property(match => match.StartedAt)
             .HasColumnType("timestamp with time zone");
 
+        builder.Property(match => match.ExpiresAt)
+            .HasColumnType("timestamp with time zone");
+
         builder.Property(match => match.CompletedAt)
             .HasColumnType("timestamp with time zone");
+
+        builder.Property(match => match.CompletionReason)
+            .HasColumnType("integer");
 
         builder.HasMany(match => match.Guesses)
             .WithOne(guess => guess.Match)

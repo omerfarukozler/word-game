@@ -14,7 +14,13 @@ import {
   respondRematch,
   startMatch,
 } from '../../../services/roomApi'
-import { MatchStatus, RoomStatus, type Match, type Room } from '../../../types/domain'
+import {
+  MatchCompletionReason,
+  MatchStatus,
+  RoomStatus,
+  type Match,
+  type Room,
+} from '../../../types/domain'
 import type { PlayerSession } from '../../../session/playerSessionStorage'
 import { upsertById } from '../../../utils/dedupe'
 import { toFriendlyErrorMessage } from '../../../utils/problemDetails'
@@ -71,16 +77,23 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
 
   const applyRoomSnapshot = useCallback((nextRoom: Room) => {
     const nextCurrentMatch = selectCurrentMatch(nextRoom)
+    const snapshotCompletionReason =
+      nextCurrentMatch?.completionReason ??
+      (nextCurrentMatch?.winnerPlayerId
+        ? MatchCompletionReason.CorrectGuess
+        : MatchCompletionReason.TimeExpired)
     setRoom(nextRoom)
     setCurrentMatch(nextCurrentMatch)
     setMatchResult(
-      nextCurrentMatch?.status === MatchStatus.Completed &&
-        nextCurrentMatch.winnerPlayerId &&
-        nextCurrentMatch.completedAt
+      nextCurrentMatch?.status === MatchStatus.Completed && nextCurrentMatch.completedAt
         ? {
             matchId: nextCurrentMatch.id,
             winnerPlayerId: nextCurrentMatch.winnerPlayerId,
             completedAt: nextCurrentMatch.completedAt,
+            completionReason: snapshotCompletionReason,
+            isDraw:
+              nextCurrentMatch.winnerPlayerId === null &&
+              snapshotCompletionReason === MatchCompletionReason.TimeExpired,
           }
         : null,
     )
@@ -137,6 +150,7 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
         status: MatchStatus.Completed,
         winnerPlayerId: notification.winnerPlayerId,
         completedAt: notification.completedAt,
+        completionReason: notification.completionReason,
       }
     })
     setRoom((previousRoom) => {
@@ -154,6 +168,7 @@ export function useRoomSession(roomCode: string, playerSession: PlayerSession) {
                 status: MatchStatus.Completed,
                 winnerPlayerId: notification.winnerPlayerId,
                 completedAt: notification.completedAt,
+                completionReason: notification.completionReason,
               }
             : match,
         ),

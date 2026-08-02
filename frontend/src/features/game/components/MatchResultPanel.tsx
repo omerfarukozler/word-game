@@ -1,4 +1,4 @@
-import type { Room } from '../../../types/domain'
+import { MatchCompletionReason, type Room } from '../../../types/domain'
 import type { RematchState } from '../../room/hooks/useRoomSession'
 import type { MatchResult } from '../types'
 
@@ -23,6 +23,26 @@ export function MatchResultPanel({
 }: MatchResultPanelProps) {
   const winner = room.players.find((player) => player.id === result.winnerPlayerId)
   const didCurrentPlayerWin = result.winnerPlayerId === currentPlayerId
+  const title = result.isDraw
+    ? 'Süre doldu.'
+    : result.completionReason === MatchCompletionReason.AttemptLimit &&
+        !didCurrentPlayerWin
+      ? 'Tahmin hakların bitti.'
+      : didCurrentPlayerWin
+        ? 'Kazandın!'
+        : 'Bu tur rakibin kazandı.'
+  const description = result.isDraw
+    ? 'Bu tur berabere tamamlandı.'
+    : result.completionReason === MatchCompletionReason.AttemptLimit &&
+        didCurrentPlayerWin
+      ? 'Rakibin 6 tahmin hakkını kullandı. Bu turu sen kazandın.'
+      : result.completionReason === MatchCompletionReason.AttemptLimit
+        ? 'Bu tur rakibin kazandı.'
+        : didCurrentPlayerWin
+          ? 'Kelimeyi rakibinden önce buldun.'
+          : winner
+            ? `${winner.nickname} bu turu kazandı.`
+            : 'Kazanan oyuncu belirlendi.'
   const isRequestDisabled =
     rematchState.status === 'requesting' ||
     rematchState.status === 'waiting' ||
@@ -37,20 +57,14 @@ export function MatchResultPanel({
       <div className="match-result-panel__summary">
         <div>
           <p className="eyebrow">Tur tamamlandı</p>
-          <h2>{didCurrentPlayerWin ? 'Kazandın!' : 'Bu tur rakibin kazandı.'}</h2>
+          <h2>{title}</h2>
         </div>
-        <p>
-          {didCurrentPlayerWin
-            ? 'Kelimeyi rakibinden önce buldun.'
-            : winner
-              ? `${winner.nickname} bu turu kazandı.`
-              : 'Kazanan oyuncu belirlendi.'}
-        </p>
+        <p>{description}</p>
       </div>
       <dl className="result-stats">
         <div>
           <dt>Kazanan</dt>
-          <dd>{winner?.nickname ?? 'Bilinmiyor'}</dd>
+          <dd>{result.isDraw ? 'Berabere' : (winner?.nickname ?? 'Bilinmiyor')}</dd>
         </div>
         <div>
           <dt>Senin tahminin</dt>

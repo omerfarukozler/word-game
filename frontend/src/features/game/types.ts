@@ -1,4 +1,9 @@
-import type { GuessLetterEvaluation, Guid, IsoDateTime } from '../../types/domain'
+import type {
+  GuessLetterEvaluation,
+  Guid,
+  IsoDateTime,
+  MatchCompletionReason,
+} from '../../types/domain'
 
 export interface GameGuess {
   id: Guid
@@ -13,6 +18,8 @@ export interface GameGuess {
 
 export interface MatchResult {
   matchId: Guid
-  winnerPlayerId: Guid
+  winnerPlayerId: Guid | null
   completedAt: IsoDateTime
+  completionReason: MatchCompletionReason
+  isDraw: boolean
 }

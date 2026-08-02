@@ -7,6 +7,7 @@ using WordBattle.Application.Dtos.Responses;
 using WordBattle.Application.Exceptions;
 using WordBattle.Application.Interfaces;
 using WordBattle.Domain.Entities;
+using WordBattle.Domain;
 using WordBattle.Domain.Enums;
 
 namespace WordBattle.Application.Services;
@@ -70,6 +71,39 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
             throw new BusinessRuleException("Invalid player token.");
         }
 
+        var submittedAt = DateTime.UtcNow;
+
+        if (match.ExpiresAt.HasValue && submittedAt >= match.ExpiresAt.Value)
+        {
+            match.Status = MatchStatus.Completed;
+            match.WinnerPlayerId = null;
+            match.CompletedAt = submittedAt;
+            match.CompletionReason = MatchCompletionReason.TimeExpired;
+            match.Room.Status = RoomStatus.Ready;
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            await NotifyMatchCompletedAsync(
+                match.Room.Code,
+                CreateMatchCompletedNotification(match),
+                cancellationToken);
+
+            throw new BusinessRuleException("The match time has expired.");
+        }
+
+        var previousAttemptCount = await dbContext.Guesses
+            .AsNoTracking()
+            .CountAsync(
+                guess =>
+                    guess.MatchId == match.Id &&
+                    guess.PlayerId == player.Id,
+                cancellationToken);
+
+        if (previousAttemptCount >= GameRules.MaximumAttemptsPerPlayer)
+        {
+            throw new BusinessRuleException("Maximum guess attempts reached.");
+        }
+
         var normalizedWord = request.Word
             .Trim()
             .ToUpper(TurkishCulture);
@@ -108,15 +142,7 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
         var isCorrect = evaluation.All(
             item => item.Status == GuessLetterStatus.Correct);
 
-        var attemptNumber = await dbContext.Guesses
-            .AsNoTracking()
-            .CountAsync(
-                guess =>
-                    guess.MatchId == match.Id &&
-                    guess.PlayerId == player.Id,
-                cancellationToken) + 1;
-
-        var submittedAt = DateTime.UtcNow;
+        var attemptNumber = previousAttemptCount + 1;
 
         var guess = new Guess
         {
@@ -135,10 +161,31 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
             match.Status = MatchStatus.Completed;
             match.WinnerPlayerId = player.Id;
             match.CompletedAt = submittedAt;
+            match.CompletionReason = MatchCompletionReason.CorrectGuess;
+            match.Room.Status = RoomStatus.Ready;
+        }
+        else if (attemptNumber == GameRules.MaximumAttemptsPerPlayer)
+        {
+            var winner = match.Room.Players.SingleOrDefault(
+                roomPlayer => roomPlayer.Id != player.Id);
+
+            if (winner is null || match.Room.Players.Count != 2)
+            {
+                throw new InvalidOperationException(
+                    "Attempt limit completion requires exactly two room players.");
+            }
+
+            match.Status = MatchStatus.Completed;
+            match.WinnerPlayerId = winner.Id;
+            match.CompletedAt = submittedAt;
+            match.CompletionReason = MatchCompletionReason.AttemptLimit;
             match.Room.Status = RoomStatus.Ready;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        var isMatchCompleted = match.Status == MatchStatus.Completed;
+        var completionReason = isMatchCompleted ? match.CompletionReason : null;
 
         var response = new SubmitGuessResponse
         {
@@ -149,8 +196,11 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
             AttemptNumber = guess.AttemptNumber,
             Evaluation = evaluation,
             IsCorrect = isCorrect,
-            IsMatchCompleted = isCorrect,
-            WinnerPlayerId = isCorrect ? player.Id : null,
+            IsMatchCompleted = isMatchCompleted,
+            WinnerPlayerId = isMatchCompleted ? match.WinnerPlayerId : null,
+            CompletionReason = completionReason,
+            IsDraw = match.WinnerPlayerId is null &&
+                completionReason == MatchCompletionReason.TimeExpired,
             SubmittedAt = guess.CreatedAt
         };
 
@@ -180,30 +230,56 @@ public sealed class MatchService(IGameDbContext dbContext, IGuessEvaluator guess
                 guess.Id);
         }
 
-        if (isCorrect)
+        if (isMatchCompleted)
         {
-            try
-            {
-                await gameNotifier.MatchCompletedAsync(
-                    match.Room.Code,
-                    new MatchCompletedNotification
-                    {
-                        MatchId = match.Id,
-                        WinnerPlayerId = player.Id,
-                        CompletedAt = match.CompletedAt!.Value
-                    },
-                    cancellationToken);
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "MatchCompleted notification could not be sent for room {RoomCode}, match {MatchId}",
-                    match.Room.Code,
-                    match.Id);
-            }
+            await NotifyMatchCompletedAsync(
+                match.Room.Code,
+                CreateMatchCompletedNotification(match),
+                cancellationToken);
         }
 
         return response;
+    }
+
+    private async Task NotifyMatchCompletedAsync(
+        string roomCode,
+        MatchCompletedNotification notification,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await gameNotifier.MatchCompletedAsync(
+                roomCode,
+                notification,
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "MatchCompleted notification could not be sent for room {RoomCode}, match {MatchId}",
+                roomCode,
+                notification.MatchId);
+        }
+    }
+
+    private static MatchCompletedNotification CreateMatchCompletedNotification(
+        GameMatch match)
+    {
+        if (!match.CompletedAt.HasValue || !match.CompletionReason.HasValue)
+        {
+            throw new InvalidOperationException(
+                "Completed match notification requires completion data.");
+        }
+
+        return new MatchCompletedNotification
+        {
+            MatchId = match.Id,
+            WinnerPlayerId = match.WinnerPlayerId,
+            CompletedAt = match.CompletedAt.Value,
+            CompletionReason = match.CompletionReason.Value,
+            IsDraw = match.WinnerPlayerId is null &&
+                match.CompletionReason == MatchCompletionReason.TimeExpired
+        };
     }
 }

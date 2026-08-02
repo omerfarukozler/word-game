@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { submitGuess } from '../../../services/matchApi'
 import {
   GuessLetterStatus,
+  MatchCompletionReason,
   MatchStatus,
   RoomStatus,
   type Match,
@@ -59,7 +60,9 @@ const match: Match = {
   status: MatchStatus.Playing,
   winnerPlayerId: null,
   startedAt: '2026-07-30T12:01:00Z',
+  expiresAt: '2099-07-30T12:03:00Z',
   completedAt: null,
+  completionReason: null,
 }
 
 function submittedGuess(attemptNumber: number): GameGuess {
@@ -157,6 +160,8 @@ describe('useGameSession', () => {
       isCorrect: false,
       isMatchCompleted: false,
       winnerPlayerId: null,
+      completionReason: null,
+      isDraw: false,
       submittedAt: '2026-07-30T12:02:00Z',
     })
     const { result, onGuessSubmitted } = renderGameSession()
@@ -224,6 +229,8 @@ describe('useGameSession', () => {
         matchId: 'match-1',
         winnerPlayerId: 'player-2',
         completedAt: '2026-07-30T12:03:00Z',
+        completionReason: MatchCompletionReason.CorrectGuess,
+        isDraw: false,
       },
     })
 
@@ -234,6 +241,32 @@ describe('useGameSession', () => {
 
     expect(result.current.currentGuess).toBe('')
     expect(submitGuess).not.toHaveBeenCalled()
+  })
+
+  it('locks input at zero and waits for backend completion', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-30T12:03:00Z'))
+
+    try {
+      const { result } = renderGameSession({
+        match: { ...match, expiresAt: '2026-07-30T12:03:00Z' },
+      })
+
+      act(() => {
+        result.current.appendLetter('A')
+      })
+      await act(async () => {
+        await result.current.submitCurrentGuess()
+      })
+
+      expect(result.current.remainingMilliseconds).toBe(0)
+      expect(result.current.isTimeExpired).toBe(true)
+      expect(result.current.currentGuess).toBe('')
+      expect(result.current.submitError).toBe('Süre doldu, sonuç bekleniyor...')
+      expect(submitGuess).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('blocks input and submit after six own guesses', async () => {

@@ -16,7 +16,11 @@ public sealed class GameMatch
 
     public DateTime? StartedAt { get; set; }
 
+    public DateTime? ExpiresAt { get; set; }
+
     public DateTime? CompletedAt { get; set; }
+
+    public MatchCompletionReason? CompletionReason { get; set; }
 
     public Room Room { get; set; } = null!;
 

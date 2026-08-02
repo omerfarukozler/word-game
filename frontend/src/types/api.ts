@@ -1,4 +1,11 @@
-import type { GuessLetterEvaluation, Guid, IsoDateTime, Match, Room } from './domain'
+import type {
+  GuessLetterEvaluation,
+  Guid,
+  IsoDateTime,
+  Match,
+  MatchCompletionReason,
+  Room,
+} from './domain'
 
 export interface ProblemDetails {
   status?: number
@@ -51,6 +58,8 @@ export interface SubmitGuessResponse {
   isCorrect: boolean
   isMatchCompleted: boolean
   winnerPlayerId: Guid | null
+  completionReason: MatchCompletionReason | null
+  isDraw: boolean
   submittedAt: IsoDateTime
 }
 

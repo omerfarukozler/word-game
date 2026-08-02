@@ -14,5 +14,9 @@ public sealed class MatchResponse
 
     public DateTime? StartedAt { get; set; }
 
+    public DateTime? ExpiresAt { get; set; }
+
     public DateTime? CompletedAt { get; set; }
+
+    public MatchCompletionReason? CompletionReason { get; set; }
 }

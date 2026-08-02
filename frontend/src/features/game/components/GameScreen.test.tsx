@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import {
   GuessLetterStatus,
+  MatchCompletionReason,
   MatchStatus,
   RoomStatus,
   type Match,
@@ -58,7 +59,9 @@ const match: Match = {
   status: MatchStatus.Playing,
   winnerPlayerId: null,
   startedAt: '2026-07-30T12:01:00Z',
+  expiresAt: '2099-07-30T12:03:00Z',
   completedAt: null,
+  completionReason: null,
 }
 
 const guesses: GameGuess[] = [
@@ -167,11 +170,14 @@ describe('GameScreen', () => {
         status: MatchStatus.Completed,
         winnerPlayerId: 'player-2',
         completedAt: '2026-07-30T12:03:00Z',
+        completionReason: MatchCompletionReason.CorrectGuess,
       },
       matchResult: {
         matchId: 'match-1',
         winnerPlayerId: 'player-2',
         completedAt: '2026-07-30T12:03:00Z',
+        completionReason: MatchCompletionReason.CorrectGuess,
+        isDraw: false,
       },
     })
 
@@ -193,11 +199,14 @@ describe('GameScreen', () => {
         status: MatchStatus.Completed,
         winnerPlayerId: 'player-1',
         completedAt: '2026-07-30T12:03:00Z',
+        completionReason: MatchCompletionReason.CorrectGuess,
       },
       matchResult: {
         matchId: 'match-1',
         winnerPlayerId: 'player-1',
         completedAt: '2026-07-30T12:03:00Z',
+        completionReason: MatchCompletionReason.CorrectGuess,
+        isDraw: false,
       },
       rematchState: {
         status: 'incoming',

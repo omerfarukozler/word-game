@@ -9,6 +9,7 @@ import { InlineError } from '../../../components/InlineError'
 import { GameBoard } from './GameBoard'
 import { GameHeader } from './GameHeader'
 import { MatchResultPanel } from './MatchResultPanel'
+import { MatchTimer } from './MatchTimer'
 import { OpponentProgress } from './OpponentProgress'
 import { RematchDecisionModal } from './RematchDecisionModal'
 import { VirtualKeyboard } from './VirtualKeyboard'
@@ -78,6 +79,8 @@ export function GameScreen({
         </p>
       )}
 
+      <MatchTimer remainingMilliseconds={gameSession.remainingMilliseconds} />
+
       <div className="game-layout">
         <GameBoard
           guesses={gameSession.ownGuesses}
@@ -134,11 +137,17 @@ export function GameScreen({
             {gameSession.submitMessage}
           </p>
         )}
+        {gameSession.isTimeExpired && !gameSession.isCompleted && (
+          <p className="copy-status" role="status" aria-live="polite">
+            Süre doldu, sonuç bekleniyor...
+          </p>
+        )}
         <VirtualKeyboard
           keyboardState={gameSession.keyboardState}
           isDisabled={
             !gameSession.hasRemainingGuesses ||
             gameSession.isCompleted ||
+            gameSession.isTimeExpired ||
             gameSession.isSubmittingGuess
           }
           onLetter={gameSession.appendLetter}

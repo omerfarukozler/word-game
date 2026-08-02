@@ -1,4 +1,5 @@
 using FluentValidation.AspNetCore;
+using WordBattle.Api.BackgroundServices;
 using WordBattle.Api.Hubs;
 using WordBattle.Api.Middleware;
 using WordBattle.Api.Realtime;
@@ -14,6 +15,7 @@ builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IGameNotifier, SignalRGameNotifier>();
+builder.Services.AddHostedService<MatchExpirationBackgroundService>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);

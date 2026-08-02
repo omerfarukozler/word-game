@@ -1,4 +1,11 @@
-import type { GuessLetterEvaluation, Guid, IsoDateTime, Match, Room } from './domain'
+import type {
+  GuessLetterEvaluation,
+  Guid,
+  IsoDateTime,
+  Match,
+  MatchCompletionReason,
+  Room,
+} from './domain'
 
 export type RoomUpdatedNotification = Room
 export type MatchStartedNotification = Match
@@ -15,8 +22,10 @@ export interface GuessSubmittedNotification {
 
 export interface MatchCompletedNotification {
   matchId: Guid
-  winnerPlayerId: Guid
+  winnerPlayerId: Guid | null
   completedAt: IsoDateTime
+  completionReason: MatchCompletionReason
+  isDraw: boolean
 }
 
 export interface RematchRequestedNotification {

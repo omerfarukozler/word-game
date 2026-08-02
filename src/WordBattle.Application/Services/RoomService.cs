@@ -6,6 +6,7 @@ using WordBattle.Application.Dtos.Requests;
 using WordBattle.Application.Dtos.Responses;
 using WordBattle.Application.Exceptions;
 using WordBattle.Application.Interfaces;
+using WordBattle.Domain;
 using WordBattle.Domain.Entities;
 using WordBattle.Domain.Enums;
 
@@ -561,7 +562,9 @@ public sealed class RoomService(
                     Status = match.Status,
                     WinnerPlayerId = match.WinnerPlayerId,
                     StartedAt = match.StartedAt,
-                    CompletedAt = match.CompletedAt
+                    ExpiresAt = match.ExpiresAt,
+                    CompletedAt = match.CompletedAt,
+                    CompletionReason = match.CompletionReason
                 })
                 .ToArray()
         };
@@ -595,6 +598,7 @@ public sealed class RoomService(
             Status = MatchStatus.Playing,
             WinnerPlayerId = null,
             StartedAt = startedAt,
+            ExpiresAt = startedAt.Add(GameRules.MatchDuration),
             CompletedAt = null
         };
     }
@@ -608,7 +612,9 @@ public sealed class RoomService(
             Status = match.Status,
             WinnerPlayerId = match.WinnerPlayerId,
             StartedAt = match.StartedAt,
-            CompletedAt = match.CompletedAt
+            ExpiresAt = match.ExpiresAt,
+            CompletedAt = match.CompletedAt,
+            CompletionReason = match.CompletionReason
         };
     }
 

@@ -27,6 +27,15 @@ export const GuessLetterStatus = {
 
 export type GuessLetterStatus = (typeof GuessLetterStatus)[keyof typeof GuessLetterStatus]
 
+export const MatchCompletionReason = {
+  CorrectGuess: 0,
+  AttemptLimit: 1,
+  TimeExpired: 2,
+} as const
+
+export type MatchCompletionReason =
+  (typeof MatchCompletionReason)[keyof typeof MatchCompletionReason]
+
 export interface RoomPlayer {
   id: Guid
   nickname: string
@@ -42,7 +51,9 @@ export interface Match {
   status: MatchStatus
   winnerPlayerId: Guid | null
   startedAt: IsoDateTime | null
+  expiresAt: IsoDateTime | null
   completedAt: IsoDateTime | null
+  completionReason: MatchCompletionReason | null
 }
 
 export interface Room {

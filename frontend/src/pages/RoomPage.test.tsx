@@ -2,7 +2,12 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { MatchStatus, RoomStatus, type Room } from '../types/domain'
+import {
+  MatchCompletionReason,
+  MatchStatus,
+  RoomStatus,
+  type Room,
+} from '../types/domain'
 import {
   PLAYER_SESSION_STORAGE_KEY,
   type PlayerSession,
@@ -216,7 +221,9 @@ describe('RoomPage', () => {
             status: 2,
             winnerPlayerId: 'host-1',
             startedAt: '2026-07-29T18:00:00Z',
+            expiresAt: '2026-07-29T18:02:00Z',
             completedAt: '2026-07-29T18:01:00Z',
+            completionReason: MatchCompletionReason.CorrectGuess,
           },
         ],
       }),
@@ -241,7 +248,9 @@ describe('RoomPage', () => {
             status: MatchStatus.Playing,
             winnerPlayerId: null,
             startedAt: '2026-07-29T18:00:00Z',
+            expiresAt: '2026-07-29T18:02:00Z',
             completedAt: null,
+            completionReason: null,
           },
         ],
       }),
