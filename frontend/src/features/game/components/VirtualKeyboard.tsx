@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { VIRTUAL_KEYBOARD_ROWS } from '../constants/gameRules'
 import type { KeyboardLetterState } from '../utils/keyboardState'
 
@@ -16,6 +17,20 @@ export function VirtualKeyboard({
   onBackspace,
   onEnter,
 }: VirtualKeyboardProps) {
+  const [pressedKey, setPressedKey] = useState<string | null>(null)
+
+  function handleKeyPress(key: string, action: () => void) {
+    if (isDisabled) {
+      return
+    }
+
+    setPressedKey(key)
+    action()
+    window.setTimeout(() => {
+      setPressedKey((currentKey) => (currentKey === key ? null : currentKey))
+    }, 140)
+  }
+
   return (
     <section className="virtual-keyboard" aria-label="Sanal klavye">
       {VIRTUAL_KEYBOARD_ROWS.map((row, rowIndex) => (
@@ -26,7 +41,10 @@ export function VirtualKeyboard({
               className="keyboard-key keyboard-key--wide"
               disabled={isDisabled}
               aria-label="Tahmini gönder"
-              onClick={onEnter}
+              onPointerDown={(event) => {
+                event.preventDefault()
+                handleKeyPress('Enter', onEnter)
+              }}
             >
               Enter
             </button>
@@ -41,8 +59,17 @@ export function VirtualKeyboard({
                 disabled={isDisabled}
                 aria-label={`${letter} harfi`}
                 key={letter}
-                onClick={() => onLetter(letter)}
+                data-pressed={pressedKey === letter ? true : undefined}
+                onPointerDown={(event) => {
+                  event.preventDefault()
+                  handleKeyPress(letter, () => onLetter(letter))
+                }}
               >
+                {pressedKey === letter && (
+                  <span className="keyboard-key__pop" aria-hidden="true">
+                    {letter}
+                  </span>
+                )}
                 {letter}
               </button>
             )
@@ -53,7 +80,10 @@ export function VirtualKeyboard({
               className="keyboard-key keyboard-key--wide"
               disabled={isDisabled}
               aria-label="Son harfi sil"
-              onClick={onBackspace}
+              onPointerDown={(event) => {
+                event.preventDefault()
+                handleKeyPress('Sil', onBackspace)
+              }}
             >
               Sil
             </button>

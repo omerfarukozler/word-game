@@ -136,7 +136,11 @@ export function GameScreen({
         )}
         <VirtualKeyboard
           keyboardState={gameSession.keyboardState}
-          isDisabled={gameSession.isCompleted || gameSession.isSubmittingGuess}
+          isDisabled={
+            !gameSession.hasRemainingGuesses ||
+            gameSession.isCompleted ||
+            gameSession.isSubmittingGuess
+          }
           onLetter={gameSession.appendLetter}
           onBackspace={gameSession.removeLetter}
           onEnter={gameSession.submitCurrentGuess}

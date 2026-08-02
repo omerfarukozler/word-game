@@ -133,6 +133,10 @@ describe('GameScreen', () => {
       /rakip 1. tahmininin 1. kutusu, kelimede yok/i,
     )
 
+    expect(screen.getByText(/1\. tahmin/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole('listitem', { name: /rakip 1\. tahmini/i }),
+    ).toBeInTheDocument()
     expect(opponentTile).toBeInTheDocument()
     expect(opponentTile).toHaveClass('letter-tile--absent')
     expect(opponentTile).toHaveClass('game-letter-tile--absent')
@@ -147,6 +151,13 @@ describe('GameScreen', () => {
     expect(within(legend).getByText(/doğru yerde/i)).toBeInTheDocument()
     expect(within(legend).getByText(/kelimede var/i)).toBeInTheDocument()
     expect(within(legend).getByText(/kelimede yok/i)).toBeInTheDocument()
+  })
+
+  it('renders six own board attempt rows', () => {
+    renderGameScreen()
+
+    expect(screen.getByLabelText(/aktif tahmin satırı/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/6. tahmin hakkının 1. kutusu boş/i)).toBeInTheDocument()
   })
 
   it('shows winner result with rematch controls', () => {

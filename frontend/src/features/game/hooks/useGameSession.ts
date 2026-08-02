@@ -7,7 +7,7 @@ import type {
 } from '../../../types/realtime'
 import type { PlayerSession } from '../../../session/playerSessionStorage'
 import { toFriendlyErrorMessage } from '../../../utils/problemDetails'
-import { CURRENT_WORD_LENGTH } from '../constants/gameRules'
+import { CURRENT_WORD_LENGTH, MAX_GUESS_ATTEMPTS } from '../constants/gameRules'
 import type { GameGuess, MatchResult } from '../types'
 import { splitGuessesByPlayer } from '../utils/guessSelectors'
 import { buildKeyboardState } from '../utils/keyboardState'
@@ -73,12 +73,13 @@ export function useGameSession({
     [guesses, match.id, session.playerId],
   )
   const keyboardState = useMemo(() => buildKeyboardState(ownGuesses), [ownGuesses])
+  const hasRemainingGuesses = ownGuesses.length < MAX_GUESS_ATTEMPTS
 
   const opponent = room.players.find((player) => player.id !== session.playerId) ?? null
 
   const appendLetter = useCallback(
     (letter: string) => {
-      if (isCompleted || isSubmittingGuessRef.current) {
+      if (!hasRemainingGuesses || isCompleted || isSubmittingGuessRef.current) {
         return
       }
 
@@ -98,7 +99,7 @@ export function useGameSession({
         return `${previousGuess}${normalizedLetter}`
       })
     },
-    [isCompleted],
+    [hasRemainingGuesses, isCompleted],
   )
 
   const removeLetter = useCallback(() => {
@@ -117,6 +118,11 @@ export function useGameSession({
 
   const submitCurrentGuess = useCallback(async () => {
     if (isCompleted || isSubmittingGuessRef.current) {
+      return
+    }
+
+    if (!hasRemainingGuesses) {
+      triggerInvalidGuess(`${MAX_GUESS_ATTEMPTS} tahmin hakkını kullandın.`)
       return
     }
 
@@ -165,6 +171,7 @@ export function useGameSession({
     }
   }, [
     currentGuess,
+    hasRemainingGuesses,
     isCompleted,
     match.id,
     onGuessSubmitted,
@@ -219,6 +226,7 @@ export function useGameSession({
     opponent,
     opponentGuesses,
     keyboardState,
+    hasRemainingGuesses,
     isCompleted,
     isSubmittingGuess,
     submitError,

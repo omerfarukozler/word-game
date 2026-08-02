@@ -229,7 +229,7 @@ describe('RoomPage', () => {
     expect(screen.queryByRole('button', { name: /maçı başlat/i })).not.toBeInTheDocument()
   })
 
-  it('renders the match started placeholder without guess controls', async () => {
+  it('renders the match screen with virtual guess controls', async () => {
     writeSession()
     vi.mocked(getRoom).mockResolvedValue(
       createRoomSnapshot({

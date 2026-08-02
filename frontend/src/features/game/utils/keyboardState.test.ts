@@ -4,6 +4,7 @@ import {
   type GuessLetterStatus as LetterStatus,
 } from '../../../types/domain'
 import type { GameGuess } from '../types'
+import { VIRTUAL_KEYBOARD_ROWS } from '../constants/gameRules'
 import { buildKeyboardState } from './keyboardState'
 
 function guess(id: string, letter: string, status: LetterStatus): GameGuess {
@@ -19,6 +20,23 @@ function guess(id: string, letter: string, status: LetterStatus): GameGuess {
 }
 
 describe('buildKeyboardState', () => {
+  it('uses a Turkish Q keyboard layout', () => {
+    expect(VIRTUAL_KEYBOARD_ROWS[0]).toEqual([
+      'Q',
+      'W',
+      'E',
+      'R',
+      'T',
+      'Y',
+      'U',
+      'I',
+      'O',
+      'P',
+      'Ğ',
+      'Ü',
+    ])
+  })
+
   it('keeps the highest priority letter state', () => {
     const state = buildKeyboardState([
       guess('guess-1', 'A', GuessLetterStatus.Absent),

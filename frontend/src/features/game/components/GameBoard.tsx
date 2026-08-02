@@ -1,5 +1,7 @@
+import { MAX_GUESS_ATTEMPTS } from '../constants/gameRules'
 import type { GameGuess } from '../types'
 import { CurrentGuessRow } from './CurrentGuessRow'
+import { EmptyGuessRow } from './EmptyGuessRow'
 import { GuessRow } from './GuessRow'
 
 interface GameBoardProps {
@@ -17,6 +19,15 @@ export function GameBoard({
   shakeToken,
   isCompleted,
 }: GameBoardProps) {
+  const visibleGuesses = guesses.slice(0, MAX_GUESS_ATTEMPTS)
+  const shouldShowCurrentGuess =
+    !isCompleted && visibleGuesses.length < MAX_GUESS_ATTEMPTS
+  const filledRowCount = visibleGuesses.length + (shouldShowCurrentGuess ? 1 : 0)
+  const emptyRows = Array.from(
+    { length: Math.max(0, MAX_GUESS_ATTEMPTS - filledRowCount) },
+    (_, index) => filledRowCount + index + 1,
+  )
+
   return (
     <section className="game-panel game-board" aria-labelledby="game-board-title">
       <div>
@@ -24,16 +35,19 @@ export function GameBoard({
         <h2 id="game-board-title">Oyun tahtası</h2>
       </div>
       <div className="guess-grid" role="grid" aria-label="Kendi tahmin tahtan">
-        {guesses.map((guess) => (
+        {visibleGuesses.map((guess) => (
           <GuessRow guess={guess} isOwnGuess key={guess.id} />
         ))}
-        {!isCompleted && (
+        {shouldShowCurrentGuess && (
           <CurrentGuessRow
             currentGuess={currentGuess}
             isSubmitting={isSubmitting}
             shakeToken={shakeToken}
           />
         )}
+        {emptyRows.map((attemptNumber) => (
+          <EmptyGuessRow attemptNumber={attemptNumber} key={`empty-${attemptNumber}`} />
+        ))}
       </div>
     </section>
   )

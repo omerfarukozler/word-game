@@ -10,6 +10,7 @@ import {
 } from '../../../types/domain'
 import { ApiError } from '../../../utils/problemDetails'
 import type { PlayerSession } from '../../../session/playerSessionStorage'
+import type { GameGuess } from '../types'
 import { useGameSession } from './useGameSession'
 
 vi.mock('../../../services/matchApi', () => ({
@@ -59,6 +60,24 @@ const match: Match = {
   winnerPlayerId: null,
   startedAt: '2026-07-30T12:01:00Z',
   completedAt: null,
+}
+
+function submittedGuess(attemptNumber: number): GameGuess {
+  return {
+    id: `guess-${attemptNumber}`,
+    matchId: 'match-1',
+    playerId: 'player-1',
+    word: 'ABCDE',
+    attemptNumber,
+    evaluation: [
+      { position: 0, letter: 'A', status: GuessLetterStatus.Absent },
+      { position: 1, letter: 'B', status: GuessLetterStatus.Absent },
+      { position: 2, letter: 'C', status: GuessLetterStatus.Absent },
+      { position: 3, letter: 'D', status: GuessLetterStatus.Absent },
+      { position: 4, letter: 'E', status: GuessLetterStatus.Absent },
+    ],
+    submittedAt: '2026-07-30T12:02:00Z',
+  }
 }
 
 function renderGameSession(
@@ -214,6 +233,24 @@ describe('useGameSession', () => {
     })
 
     expect(result.current.currentGuess).toBe('')
+    expect(submitGuess).not.toHaveBeenCalled()
+  })
+
+  it('blocks input and submit after six own guesses', async () => {
+    const { result } = renderGameSession({
+      guesses: Array.from({ length: 6 }, (_, index) => submittedGuess(index + 1)),
+    })
+
+    act(() => {
+      result.current.appendLetter('A')
+    })
+    await act(async () => {
+      await result.current.submitCurrentGuess()
+    })
+
+    expect(result.current.hasRemainingGuesses).toBe(false)
+    expect(result.current.currentGuess).toBe('')
+    expect(result.current.submitError).toBe('6 tahmin hakkını kullandın.')
     expect(submitGuess).not.toHaveBeenCalled()
   })
 })
