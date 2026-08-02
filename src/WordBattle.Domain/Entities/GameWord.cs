@@ -13,4 +13,10 @@ public sealed class GameWord
     public bool CanBeTarget { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public int? Frequency { get; set; }
+
+    public int? FrequencyRank { get; set; }
+
+    public string? Source { get; set; }
 }

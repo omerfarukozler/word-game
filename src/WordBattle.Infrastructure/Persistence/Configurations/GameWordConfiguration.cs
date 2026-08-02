@@ -34,9 +34,14 @@ public sealed class GameWordConfiguration : IEntityTypeConfiguration<GameWord>
             .IsRequired()
             .HasColumnType("timestamp with time zone");
 
+        builder.Property(gameWord => gameWord.Frequency);
+
+        builder.Property(gameWord => gameWord.FrequencyRank);
+
+        builder.Property(gameWord => gameWord.Source)
+            .HasMaxLength(256);
+
         builder.HasIndex(gameWord => gameWord.Text)
             .IsUnique();
-
-        builder.HasData(GameWordSeedData.GetWords());
     }
 }
